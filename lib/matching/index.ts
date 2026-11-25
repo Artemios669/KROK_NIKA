@@ -1,4 +1,4 @@
-import {Animal} from "@/types/animal"; import {UserProfile} from "@/types/user";
+import {Animal} from "@/types/animal"; import {UserProfile} from "@/types/user"; import {characteristicMatches,SwipeReaction} from "@/lib/characteristics";
 export type Match={animal:Animal;score:number;dataCompleteness:number;matches:string[];mismatches:string[];risks:string[];questions:string[]};
 const avg=(items:(number|null)[])=>{const x=items.filter((v):v is number=>v!==null);return x.length?x.reduce((a,b)=>a+b,0)/x.length:null};
 export function matchAnimal(a:Animal,p:UserProfile):Match|null { const risks:string[]=[]; const questions:string[]=[];
@@ -15,4 +15,7 @@ export function matchAnimal(a:Animal,p:UserProfile):Match|null { const risks:str
  if(p.household.children&&a.good_with_children===null)questions.push("уточнить совместимость с детьми");
  if(a.special_care)risks.push("Есть особенности ухода — обсудите их с приютом.");
  const data=avg(scores); const score=Math.round((data??0.55)*100); return {animal:a,score,dataCompleteness:Math.round(scores.filter(x=>x!==null).length/scores.length*100),matches,mismatches,risks,questions}; }
-export const recommendations=(animals:Animal[],p:UserProfile)=>animals.map(a=>matchAnimal(a,p)).filter((x):x is Match=>x!==null).sort((a,b)=>b.score-a.score);
+export const recommendations=(animals:Animal[],p:UserProfile,swipes:SwipeReaction[]=[])=>animals.map(a=>matchAnimal(a,p)).filter((x):x is Match=>x!==null).sort((a,b)=>{
+ const rank=(animal:Animal,score:number)=>score+swipes.reduce((total,swipe)=>characteristicMatches(animal,swipe)?total+(swipe.reaction==="like"?8:-8):total,0);
+ return rank(b.animal,b.score)-rank(a.animal,a.score)||b.score-a.score;
+});
