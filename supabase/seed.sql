@@ -1,0 +1,5 @@
+-- Explicitly fictional starter records. Replace with verified shelter data before production.
+insert into animals (name,type,age_years,sex,size,color,character,activity_level,housing_requirements,good_with_children,good_with_cats,good_with_dogs,can_stay_alone_hours,special_care,description,image_url,adoption_available,guardianship_available) values
+('Луна','cat',3,'female','small',array['серая'],array['спокойная','ласковая'],'low',array['квартира'],true,true,null,8,false,'ТЕСТОВЫЕ ДАННЫЕ. Спокойная взрослая кошка.','https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba',true,true),
+('Мира','dog',5,'female','medium',array['бежевая'],array['уравновешенная','внимательная'],'moderate',array['регулярные прогулки'],true,null,true,6,false,'ТЕСТОВЫЕ ДАННЫЕ. Собаке нужны регулярные прогулки.','https://images.unsplash.com/photo-1552053831-71594a27632d',true,true),
+('Тайга','dog',1,'female','large',array['чёрная'],array['энергичная','умная'],'high',array['активные прогулки','опыт'],true,false,true,3,false,'ТЕСТОВЫЕ ДАННЫЕ. Активная молодая собака.','https://images.unsplash.com/photo-1558788353-f76d92427f16',true,false);

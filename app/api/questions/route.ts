@@ -1,0 +1,3 @@
+import {NextResponse} from "next/server";import {z} from "zod";import {getSupabase} from "@/lib/supabase/server";
+const questionSchema=z.object({animal_id:z.string().min(1).max(100),question:z.string().trim().min(3).max(1000)});
+export async function POST(req:Request){try{const body=questionSchema.parse(await req.json());const supabase=getSupabase();if(!supabase || !/^[0-9a-f-]{36}$/i.test(body.animal_id))return NextResponse.json({saved:true,mode:"demo"});const {error}=await supabase.from("animal_questions").insert(body);if(error)throw error;return NextResponse.json({saved:true,mode:"supabase"});}catch{return NextResponse.json({error:"Не удалось сохранить вопрос."},{status:400})}}

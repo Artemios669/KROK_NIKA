@@ -1,0 +1,12 @@
+-- NIKER demo schema. Apply in Supabase SQL Editor before enabling the live data source.
+create table if not exists animals (id uuid primary key default gen_random_uuid(), name text not null, type text not null check(type in ('dog','cat')), age_years numeric not null, sex text, size text, color text[] default '{}', character text[] default '{}', activity_level text, housing_requirements text[] default '{}', good_with_children boolean, good_with_cats boolean, good_with_dogs boolean, can_stay_alone_hours int, special_care boolean, description text, image_url text, adoption_available boolean default true, guardianship_available boolean default false, last_updated timestamptz default now());
+create table if not exists animal_reactions (id uuid primary key default gen_random_uuid(), animal_id uuid references animals(id), reaction text check(reaction in ('like','dislike')), session_id text not null, created_at timestamptz default now());
+create table if not exists animal_questions (id uuid primary key default gen_random_uuid(), animal_id uuid references animals(id), question text not null, answer text, status text not null default 'pending' check(status in ('pending','answered')), created_at timestamptz default now(), answered_at timestamptz);
+create table if not exists adoption_requests (id uuid primary key default gen_random_uuid(), animal_id uuid references animals(id), user_profile jsonb, contact_name text not null, contact_email text not null, message text, request_type text not null check(request_type in ('adoption','guardianship')), status text default 'pending', created_at timestamptz default now());
+alter table animals enable row level security; alter table animal_reactions enable row level security; alter table animal_questions enable row level security; alter table adoption_requests enable row level security;
+-- Safe client policies. Admin operations must use a server-only service-role key.
+create policy "public read available animals" on animals for select using (adoption_available = true);
+create policy "public create question" on animal_questions for insert with check (char_length(question) between 3 and 1000);
+create policy "public read answered question" on animal_questions for select using (status = 'answered');
+create policy "public create adoption request" on adoption_requests for insert with check (char_length(contact_name) between 2 and 80);
+create policy "public create reaction" on animal_reactions for insert with check (reaction in ('like','dislike'));

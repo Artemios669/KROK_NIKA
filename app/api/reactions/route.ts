@@ -1,0 +1,3 @@
+import {NextResponse} from "next/server";import {z} from "zod";import {getSupabase} from "@/lib/supabase/server";
+const bodySchema=z.object({animal_id:z.string().uuid().or(z.string().startsWith("demo-")),reaction:z.enum(["like","dislike"]),session_id:z.string().min(12).max(100)});
+export async function POST(req:Request){try{const body=bodySchema.parse(await req.json());const supabase=getSupabase();if(!supabase || body.animal_id.startsWith("demo-"))return NextResponse.json({saved:false,mode:"demo"});const {error}=await supabase.from("animal_reactions").insert(body);if(error)throw error;return NextResponse.json({saved:true});}catch{return NextResponse.json({error:"Не удалось сохранить реакцию."},{status:400})}}

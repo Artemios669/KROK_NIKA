@@ -1,0 +1,3 @@
+import {NextResponse} from "next/server";import {z} from "zod";import {adminCookie} from "@/lib/admin-auth";
+export async function POST(req:Request){const parsed=z.object({password:z.string().min(1).max(300)}).safeParse(await req.json());if(!parsed.success||!process.env.ADMIN_PASSWORD||parsed.data.password!==process.env.ADMIN_PASSWORD)return NextResponse.json({error:"Неверный пароль или админ-доступ не настроен."},{status:401});const res=NextResponse.json({ok:true});res.cookies.set(adminCookie());return res;}
+export async function DELETE(){const res=NextResponse.json({ok:true});res.cookies.set({name:"niker_admin",value:"",path:"/",maxAge:0});return res;}
