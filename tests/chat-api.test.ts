@@ -1,6 +1,8 @@
 import {beforeEach,describe,expect,it,vi} from "vitest";
 import {POST} from "@/app/api/chat/route";
 import {askGemini} from "@/lib/ai/gemini";
+import {emptyProfile} from "@/types/user";
+import {userProfileSchema} from "@/lib/validation/profile";
 
 vi.mock("@/lib/ai/gemini",()=>({askGemini:vi.fn()}));
 
@@ -25,7 +27,7 @@ describe("POST /api/chat",()=>{
 
     expect(response.status).toBe(200);
     expect(body.mode).toBe("demo");
-    expect(body.message).toBe("Вы живёте в квартире или частном доме?");
+    expect(body.message).toContain("Где вы живёте — в квартире или частном доме?");
   });
 
   it("returns Gemini errors without silently switching to demo",async()=>{
@@ -37,6 +39,30 @@ describe("POST /api/chat",()=>{
     expect(response.status).toBe(429);
     expect(body.error).toContain("лимит запросов Gemini");
     expect(body.mode).toBeUndefined();
+  });
+
+  it("enforces the illness-care follow-up when Gemini skips it",async()=>{
+    const profile=structuredClone(emptyProfile);
+    profile.housing.type="квартира";
+    profile.household.children=0;
+    profile.household.other_animals_confirmed=true;
+    profile.lifestyle.hours_away_daily=8;
+    profile.preferences.animal_type="cat";
+    profile.experience.has_pet_experience=true;
+    mockedAskGemini.mockResolvedValue({
+      message:"Спасибо, это полезно.",
+      profile:userProfileSchema.parse(profile),
+    });
+
+    const response=await POST(new Request("http://localhost/api/chat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-forwarded-for":"10.0.0.4"},
+      body:JSON.stringify({message:"Да",profile,currentTopic:"experience"}),
+    }));
+    const body=await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.message).toContain("серьёзно заболевал");
   });
 
   it("rejects malformed profile input",async()=>{

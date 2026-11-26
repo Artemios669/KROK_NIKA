@@ -6,10 +6,12 @@ import {
   ChatTopic,
   chatTopicSchema,
   getChatProgress,
+  hasExperienceCareDetails,
   isChatTopicComplete,
   normalizeChatProfile,
   preserveSkippedTopic,
 } from "@/lib/chat/progress";
+import {getChatScenario} from "@/lib/chat/scenarios";
 import {userProfileSchema} from "@/lib/validation/profile";
 import {emptyProfile} from "@/types/user";
 
@@ -94,8 +96,12 @@ export async function POST(request:Request) {
         ? preserveSkippedTopic(ai.profile,profile,currentTopic)
         : normalizeChatProfile(ai.profile);
       const responseProgress=getChatProgress(updatedProfile,[...nextSkippedTopics]);
+      const needsExperienceFollowUp=!skipCurrentQuestion&&
+        responseProgress.nextTopic==="experience"&&
+        updatedProfile.experience.has_pet_experience===true&&
+        !hasExperienceCareDetails(updatedProfile.experience.care_experience);
       return NextResponse.json({
-        message:ai.message,
+        message:needsExperienceFollowUp?getChatScenario(updatedProfile,"experience").question:ai.message,
         profile:updatedProfile,
         mode:"gemini",
         progress:responseProgress,

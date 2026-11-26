@@ -1,3 +1,18 @@
-import type {Metadata} from "next"; import "./styles.css"; import "./swipes.css"; import {Heart} from "lucide-react"; import Link from "next/link";
-export const metadata:Metadata={title:"НИКЕР — найдём вашего питомца",description:"Демонстрационный сервис подбора животных"};
-export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="ru"><body><header><Link className="brand" href="/"><Heart size={22} fill="currentColor"/>НИКЕР</Link><nav><Link href="/discover">Свайпы</Link><Link href="/admin">Демо-панель</Link></nav></header>{children}<footer>НИКЕР · демонстрационный MVP · сведения о животных являются тестовыми</footer></body></html>}
+import type {Metadata} from "next";
+import "./styles.css";
+import {SiteHeader} from "@/components/site-header";
+
+export const metadata:Metadata={
+  title:"НИКЕР — подбор питомца",
+  description:"Демонстрационный сервис подбора животных по образу жизни и предпочтениям.",
+};
+
+export default function RootLayout({children}:{children:React.ReactNode}) {
+  return <html lang="ru">
+    <body>
+      <SiteHeader/>
+      {children}
+      <footer>НИКЕР · демонстрационный MVP · карточки животных содержат тестовые данные</footer>
+    </body>
+  </html>;
+}

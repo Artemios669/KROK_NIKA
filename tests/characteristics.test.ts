@@ -10,6 +10,12 @@ describe("characteristic swipes",()=>{
     expect(cards.length).toBeLessThanOrEqual(10);
     for(const card of cards)for(const animal of animals)expect(`${card.title} ${card.text}`).not.toContain(animal.name);
   });
+  it("uses a photo from an animal that matches the displayed characteristic",()=>{
+    const animal=animals.find(item=>item.color.length>0)!;
+    const card=buildCharacteristicCards([animal]).find(item=>item.field==="color");
+    expect(card?.imageUrl).toBe(animal.image_url);
+    expect(card?.text).not.toContain(animal.name);
+  });
   it("uses swipe reactions to rank animals without changing their match score",()=>{
     const [first,second]=animals;
     const card=buildCharacteristicCards([second]).find(item=>item.field==="color");

@@ -49,7 +49,7 @@ export const responseSchema={
           required:["has_pet_experience","care_experience"],
           properties:{
             has_pet_experience:{type:["boolean","null"]},
-            care_experience:{type:["string","null"]},
+            care_experience:{type:["string","null"],maxLength:400},
           },
         },
         preferences:{

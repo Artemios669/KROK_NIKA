@@ -4,7 +4,7 @@ export const MAX_CHARACTERISTIC_CARDS=10;
 
 export type CharacteristicField="color"|"coat_details"|"character"|"activity_level"|"size"|"ear_shape"|"interesting_fact"|"shelter_story"|"health_notes"|"special_care";
 export type SwipeReaction={cardId:string;field:CharacteristicField;value:string;reaction:"like"|"dislike"};
-export type CharacteristicCard={id:string;field:CharacteristicField;value:string;title:string;text:string};
+export type CharacteristicCard={id:string;field:CharacteristicField;value:string;title:string;text:string;imageUrl:string};
 
 const fieldOrder:CharacteristicField[]=["color","character","activity_level","size","coat_details","ear_shape","interesting_fact","shelter_story","health_notes","special_care"];
 const activityLabels:Record<string,string>={low:"спокойный уровень активности",moderate:"умеренный уровень активности",high:"высокий уровень активности"};
@@ -36,7 +36,7 @@ export function buildCharacteristicCards(animals:Animal[]):CharacteristicCard[]{
     if(seen.has(key))continue;
     seen.add(key);
     const text=field==="color"?`Окрас: ${value}`:field==="coat_details"?`Шерсть: ${value}`:field==="character"?`Характер: ${value}`:field==="activity_level"?value:field==="size"?value:field==="ear_shape"?`Форма ушей: ${value}`:field==="interesting_fact"?`Интересный факт: ${value}`:field==="shelter_story"?`История приюта: ${value}`:field==="health_notes"?`Заметка о здоровье: ${value}`:value;
-    decks.get(field)?.push({id:key,field,value,title:titles[field],text});
+    decks.get(field)?.push({id:key,field,value,title:titles[field],text,imageUrl:animal.image_url.trim()});
   }
   const cards:CharacteristicCard[]=[];
   while(cards.length<MAX_CHARACTERISTIC_CARDS){

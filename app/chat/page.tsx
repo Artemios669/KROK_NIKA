@@ -1,21 +1,22 @@
 "use client";
 
-import {useState} from "react";
+import {useLayoutEffect,useRef,useState} from "react";
 import {Send} from "lucide-react";
 import {CharacteristicSwipe} from "@/components/characteristic-swipe";
 import {ChatTopic,getChatProgress,chatTopicSchema} from "@/lib/chat/progress";
+import {getChatScenario} from "@/lib/chat/scenarios";
 import {userProfileSchema} from "@/lib/validation/profile";
 import {emptyProfile,UserProfile} from "@/types/user";
 
 type Message={role:"assistant"|"user";text:string};
 type FailedMessage={text:string;topic:ChatTopic;skip:boolean};
 
+const requiredAnswersForSwipes=5;
+
 const initial:Message={
   role:"assistant",
-  text:"Здравствуйте! Я виртуальный помощник НИКИ. Сначала расскажите: вы живёте в квартире или частном доме?",
+  text:`Здравствуйте! Я виртуальный помощник НИКИ. ${getChatScenario(emptyProfile,"housing").question}`,
 };
-const swipeInviteAfter=6;
-const partialInviteAfter=7;
 
 export default function Chat() {
   const [messages,setMessages]=useState<Message[]>([initial]);
@@ -26,13 +27,36 @@ export default function Chat() {
   const [error,setError]=useState("");
   const [failedMessage,setFailedMessage]=useState<FailedMessage|null>(null);
   const [mode,setMode]=useState<"demo"|"gemini">("demo");
-  const [assistantTurns,setAssistantTurns]=useState(0);
   const [stage,setStage]=useState<"chat"|"swipes">("chat");
+  const [answeredQuestions,setAnsweredQuestions]=useState(0);
+  const [swipeBannerTop,setSwipeBannerTop]=useState(12);
+  const answersLabelRef=useRef<HTMLElement>(null);
+  const chatRef=useRef<HTMLElement>(null);
 
   const progress=getChatProgress(profile,skippedTopics);
-  const canOfferSwipes=assistantTurns>=swipeInviteAfter&&(
-    progress.canProceedWithPartialProfile||assistantTurns>=partialInviteAfter
-  );
+  const answeredRequiredQuestions=Math.min(answeredQuestions,requiredAnswersForSwipes);
+
+  useLayoutEffect(()=>{
+    if(answeredQuestions<requiredAnswersForSwipes||stage!=="chat")return;
+
+    const updateBannerPosition=()=>{
+      const answersLabel=answersLabelRef.current?.getBoundingClientRect();
+      const chat=chatRef.current?.getBoundingClientRect();
+      if(!answersLabel||!chat)return;
+      setSwipeBannerTop(Math.max(12,answersLabel.bottom-chat.top+8));
+    };
+
+    const observer=new ResizeObserver(updateBannerPosition);
+    if(answersLabelRef.current)observer.observe(answersLabelRef.current);
+    if(chatRef.current)observer.observe(chatRef.current);
+    window.addEventListener("resize",updateBannerPosition);
+    updateBannerPosition();
+
+    return ()=>{
+      observer.disconnect();
+      window.removeEventListener("resize",updateBannerPosition);
+    };
+  },[answeredQuestions,stage]);
 
   async function sendMessage(text:string,skip=false,retry?:FailedMessage) {
     if(loading||(!retry&&!text.trim()))return;
@@ -75,9 +99,9 @@ export default function Chat() {
       setProfile(parsedProfile.data);
       setSkippedTopics(nextSkipped);
       setMode(data.mode==="gemini"?"gemini":"demo");
-      setAssistantTurns(turns=>turns+1);
       setMessages(items=>[...items,{role:"assistant",text:data.message}]);
       setFailedMessage(null);
+      if(!skip)setAnsweredQuestions(count=>count+1);
 
       try {
         localStorage.setItem("niker-profile",JSON.stringify(parsedProfile.data));
@@ -118,11 +142,16 @@ export default function Chat() {
     <aside>
       <span className="demo">{mode==="gemini"?"GEMINI-ПОМОЩНИК":"ДЕМОНСТРАЦИОННЫЙ РЕЖИМ"}</span>
       <h2>Узнаём друг друга</h2>
-      <p>Я буду задавать по одному вопросу. Если не хотите отвечать на тему, её можно пропустить.</p>
-      <div className="progress"><span style={{width:`${Math.min(100,assistantTurns/swipeInviteAfter*100)}%`}}/></div>
-      <small>Ответов помощника: {Math.min(assistantTurns,swipeInviteAfter)} из {swipeInviteAfter}. Ваш профиль не отправляется реальному приюту.</small>
+      <p>Я буду собирать связанные сведения вместе. Если не хотите отвечать на тему, её можно пропустить.</p>
+      <div className="progress"><span style={{width:`${answeredRequiredQuestions/requiredAnswersForSwipes*100}%`}}/></div>
+      <small ref={answersLabelRef}>Ответы на обязательные вопросы: {answeredRequiredQuestions} из {requiredAnswersForSwipes}.</small>
+      <small>Профиль не отправляется реальному приюту.</small>
     </aside>
-    <section className="chat">
+    <section className="chat" ref={chatRef}>
+      {answeredQuestions>=requiredAnswersForSwipes&&<div className="chat-swipe-banner" role="status" style={{top:swipeBannerTop}}>
+        <p>Вы ответили на пять обязательных вопросов. Можно перейти к свайпам или продолжить разговор.</p>
+        <button className="button" type="button" onClick={()=>setStage("swipes")}>Свайпать характеристики</button>
+      </div>}
       <div className="messages">
         {messages.map((message,index)=><p key={index} className={message.role}>{message.text}</p>)}
         {loading&&<p className="assistant">Подбираю следующий вопрос…</p>}
@@ -132,13 +161,6 @@ export default function Chat() {
           <button type="button" onClick={removeFailedMessage} disabled={loading}>Убрать сообщение</button>
         </div>}
       </div>
-      {canOfferSwipes&&<div className="swipe-invite">
-        <h3>{progress.profileComplete?"Основные предпочтения собраны":"Можно перейти к свайпам с текущими ответами"}</h3>
-        <p>{progress.profileComplete
-          ?"Попробуйте свайпать характеристики животных — имена и фотографии показывать не будем."
-          :"Часть вопросов осталась без ответа. Можно продолжить с неполным профилем: неизвестные данные не будут считаться совпадением."}</p>
-        <button className="button wide" onClick={()=>setStage("swipes")}>Посвайпать характеристики</button>
-      </div>}
       <div className="composer">
         <input
           value={value}

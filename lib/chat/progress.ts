@@ -5,8 +5,8 @@ export const chatTopics=[
   "housing",
   "family",
   "routine",
-  "experience",
   "animal_type",
+  "experience",
   "activity",
   "special_care",
   "financial_readiness",
@@ -33,6 +33,14 @@ const requiredLabels:Record<(typeof requiredTopics)[number],string>={
   animal_type:"предпочтительный тип питомца",
 };
 
+export function hasExperienceCareDetails(value:string|null) {
+  if(!value)return false;
+  const text=value.trim().toLocaleLowerCase("ru").replace(/ё/g,"е");
+  if(/не сталкивал|не приходилось|не было (?:серьезных )?(?:болезн|заболев)|(?:болезн|заболев)[^.]{0,24}не было|не знаю|не уверен/.test(text))return true;
+  if(/(?:нет|не было)\s+(?:опыта\s+)?(?:леч|обращени|лекарств|таблет|процедур|укол|операц|назначени|реабилитац)/.test(text))return false;
+  return /болезн|заболев|ветеринар|леч|лекарств|таблет|процедур|укол|операц|назначен|диагноз|реабилитац/.test(text);
+}
+
 export function isChatTopicComplete(profile:UserProfile,topic:ChatTopic) {
   switch(topic) {
     case "housing":
@@ -42,7 +50,8 @@ export function isChatTopicComplete(profile:UserProfile,topic:ChatTopic) {
     case "routine":
       return profile.lifestyle.hours_away_daily!==null;
     case "experience":
-      return profile.experience.has_pet_experience!==null;
+      return profile.experience.has_pet_experience===false||
+        (profile.experience.has_pet_experience===true&&hasExperienceCareDetails(profile.experience.care_experience));
     case "special_care":
       return profile.readiness.special_care!==null;
     case "financial_readiness":
@@ -75,6 +84,7 @@ export function getChatProgress(profile:UserProfile,skippedTopics:ChatTopic[]=[]
   const missingTopics=chatTopics.filter(topic=>!isChatTopicComplete(profile,topic));
   const skipped=new Set(skippedTopics);
   const unresolvedRequired=requiredTopics.filter(topic=>!isChatTopicComplete(profile,topic));
+  const resolvedRequiredTopics=requiredTopics.filter(topic=>isChatTopicComplete(profile,topic)||skipped.has(topic));
   const canonicalSkipped=missingTopics.filter(topic=>skipped.has(topic));
   return {
     missingTopics,
@@ -83,6 +93,8 @@ export function getChatProgress(profile:UserProfile,skippedTopics:ChatTopic[]=[]
     nextTopic:missingTopics.find(topic=>!skipped.has(topic))||null,
     profileComplete:unresolvedRequired.length===0,
     canProceedWithPartialProfile:unresolvedRequired.length===0||unresolvedRequired.every(topic=>skipped.has(topic)),
+    resolvedRequiredCount:resolvedRequiredTopics.length,
+    requiredTopicCount:requiredTopics.length,
   };
 }
 

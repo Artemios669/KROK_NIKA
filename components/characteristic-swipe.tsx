@@ -14,6 +14,7 @@ export function CharacteristicSwipe({onBack}:{onBack?:()=>void}){
   const [swipes,setSwipes]=useState<SwipeReaction[]>([]);
   const [index,setIndex]=useState(0);
   const [dragX,setDragX]=useState(0);
+  const [failedImageId,setFailedImageId]=useState<string|null>(null);
   const startX=useRef<number|null>(null);
   const cards=useMemo(()=>buildCharacteristicCards(animals),[animals]);
   const current=cards[index];
@@ -83,8 +84,15 @@ export function CharacteristicSwipe({onBack}:{onBack?:()=>void}){
     </div>
     {error&&<p className="trait-error" role="status">{error}</p>}
     {loading?<div className="trait-loading">Подготавливаем карточки…</div>:!current?<div className="trait-finished">
-      {cards.length===0?<><h2>Пока нет заполненных характеристик</h2><p>Когда приют добавит сведения, их можно будет оценить здесь.</p></>:<><span className="eyebrow">ЭТО ВСЁ НА СЕГОДНЯ</span><h2>Спасибо за ответы</h2><p>Мы учтём ваши реакции и покажем подходящие варианты.</p><Link className="button" href="/results">Посмотреть подбор <ArrowRight size={17}/></Link></>}
-      <button className="trait-reset" onClick={restart}><RotateCcw size={16}/> Начать сначала</button>
+      {cards.length===0
+        ?<><h2>Пока нет заполненных характеристик</h2><p>Когда приют добавит сведения, их можно будет оценить здесь.</p><button className="trait-reset" onClick={restart}><RotateCcw size={16}/> Обновить карточки</button></>
+        :<>
+          <span className="eyebrow">ЭТО ВСЁ НА СЕГОДНЯ</span>
+          <h2>Вы оценили все карточки</h2>
+          <p>Все {cards.length} характеристик получили вашу реакцию. Чтобы пройти карточки заново, нажмите «Свайпать снова» — сохранённые реакции будут заменены.</p>
+          <button className="button" onClick={restart}><RotateCcw size={16}/> Свайпать снова</button>
+          <Link className="trait-reset" href="/results">Посмотреть подбор <ArrowRight size={17}/></Link>
+        </>}
     </div>:<>
       <div className="trait-count">Карточка {index+1} из {cards.length}</div>
       <div className="trait-progress"><span style={{width:`${index/cards.length*100}%`}}/></div>
@@ -93,9 +101,23 @@ export function CharacteristicSwipe({onBack}:{onBack?:()=>void}){
           style={{transform:`translateX(${dragX}px) rotate(${dragX/18}deg)`}}
           onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp}
           onPointerCancel={()=>{startX.current=null;setDragX(0)}} role="group" aria-label={current.text}>
-          <span className="trait-kicker">ХАРАКТЕРИСТИКА · {current.title.toLocaleUpperCase("ru")}</span>
-          <p>{current.text}</p>
-          <span className="trait-hint">Потяните вправо или влево</span>
+          <div className="trait-photo">
+            {current.imageUrl&&failedImageId!==current.id
+              ?<img
+                src={current.imageUrl}
+                alt={`Иллюстрация к характеристике: ${current.text}`}
+                draggable={false}
+                onError={()=>setFailedImageId(current.id)}
+              />
+              :<div className="trait-photo-placeholder" role="img" aria-label="Фото питомца не добавлено или недоступно">
+                Фото питомца не добавлено или недоступно
+              </div>}
+          </div>
+          <div className="trait-card-copy">
+            <span className="trait-kicker">ХАРАКТЕРИСТИКА · {current.title.toLocaleUpperCase("ru")}</span>
+            <p>{current.text}</p>
+            <span className="trait-hint">Потяните вправо или влево</span>
+          </div>
           {dragX>30&&<span className="trait-stamp like-stamp">НРАВИТСЯ</span>}
           {dragX< -30&&<span className="trait-stamp skip-stamp">НЕ МОЁ</span>}
         </div>

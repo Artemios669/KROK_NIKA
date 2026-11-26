@@ -1,2 +1,36 @@
-import Link from "next/link"; import {ArrowRight,ShieldCheck,Sparkles,Heart} from "lucide-react";
-export default function Home(){return <main><section className="hero"><div><span className="eyebrow">Бережный подбор питомца</span><h1>Найдём того, с кем <i>по пути</i>.</h1><p>НИКЕР узнает о вашем ритме жизни и подскажет, с какими тестовыми карточками животных стоит познакомиться в первую очередь.</p><div className="actions"><Link className="button" href="/chat">Найти своего питомца <ArrowRight/></Link><Link className="button ghost" href="/discover">Смотреть животных</Link></div></div><div className="hero-image"/></section><section className="features"><article><Sparkles/>Не анкета, а разговор</article><article><ShieldCheck/>Безопасность важнее совпадения</article><article><Heart/>Только ориентир для знакомства</article></section></main>}
+import Link from "next/link";
+import {ArrowRight,Heart,ShieldCheck,Sparkles} from "lucide-react";
+
+const features=[
+  {icon:Sparkles,label:"Подбор начинается с разговора"},
+  {icon:ShieldCheck,label:"Известные ограничения учитываются"},
+  {icon:Heart,label:"Рекомендация — ориентир для знакомства"},
+];
+
+export default function Home() {
+  return <main className="home-page">
+    <section className="home-hero">
+      <div className="home-copy">
+        <span className="eyebrow">Подбор питомца</span>
+        <h1>Питомец, которому подходит ваш образ жизни</h1>
+        <p>Ответьте на несколько вопросов. Мы сравним ваши условия с характеристиками животных и покажем, что стоит уточнить у приюта.</p>
+        <div className="actions">
+          <Link className="button" href="/chat">Начать подбор <ArrowRight size={17}/></Link>
+          <Link className="button ghost" href="/discover">Оценить характеристики</Link>
+        </div>
+        <p className="home-note">Сейчас в каталоге тестовые карточки — это демонстрация работы сервиса.</p>
+      </div>
+      <img
+        className="home-image"
+        src="https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=1100&q=80"
+        alt="Собака в зелёном парке"
+      />
+    </section>
+    <section className="feature-list" aria-label="О принципах подбора">
+      {features.map(({icon:Icon,label})=><div className="feature-item" key={label}>
+        <Icon size={20} aria-hidden="true"/>
+        <span>{label}</span>
+      </div>)}
+    </section>
+  </main>;
+}
