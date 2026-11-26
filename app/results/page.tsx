@@ -1,54 +1,149 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useState} from "react";
 import Link from "next/link";
-import {ArrowRight,AlertCircle} from "lucide-react";
-import {animals as demoAnimals} from "@/lib/demo-data";
-import {recommendations} from "@/lib/matching";
-import {readTraitSwipes,SwipeReaction} from "@/lib/characteristics";
-import {emptyProfile,UserProfile} from "@/types/user";
-import {Animal} from "@/types/animal";
+import {AlertCircle,ArrowRight} from "lucide-react";
+import {emptyProfile} from "@/types/user";
+import {readTraitSwipes} from "@/lib/characteristics";
 import {userProfileSchema} from "@/lib/validation/profile";
+import {recommendationResponseSchema,RecommendationMatch} from "@/lib/validation/recommendations";
+
+function responseError(value:unknown) {
+  if(typeof value==="object"&&value!==null&&"error" in value&&typeof value.error==="string")return value.error;
+  return "Не удалось рассчитать рекомендации.";
+}
 
 export default function Results(){
-  const [profile,setProfile]=useState<UserProfile>(emptyProfile);
-  const [swipes,setSwipes]=useState<SwipeReaction[]>([]);
-  const [animals,setAnimals]=useState<Animal[]>(demoAnimals);
-  const [source,setSource]=useState<"demo"|"supabase">("demo");
+  const [matches,setMatches]=useState<RecommendationMatch[]>([]);
+  const [source,setSource]=useState<"demo"|"supabase"|"mixed">("demo");
+  const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
+  const [notice,setNotice]=useState("");
+
   useEffect(()=>{
-    try{
-      const saved=localStorage.getItem("niker-profile");
-      if(saved)setProfile(userProfileSchema.parse(JSON.parse(saved)));
-    }catch{
-      setError("Не удалось прочитать сохранённый профиль; показаны общие рекомендации.");
+    let active=true;
+
+    async function loadRecommendations() {
+      let profile=emptyProfile;
+      try {
+        const savedProfile=localStorage.getItem("niker-profile");
+        if(savedProfile) {
+          const parsedProfile=userProfileSchema.safeParse(JSON.parse(savedProfile));
+          if(!parsedProfile.success) {
+            throw new Error("Сохранённый профиль повреждён. Вернитесь в чат и пройдите его ещё раз.");
+          }
+          profile=parsedProfile.data;
+        } else {
+          setNotice("Профиль не найден. Оценка не будет персонализирована, пока вы не заполните его в чате.");
+        }
+      } catch(error) {
+        if(active) {
+          setError(error instanceof Error?error.message:"Не удалось прочитать профиль.");
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const response=await fetch("/api/recommendations",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({profile,swipes:readTraitSwipes()}),
+        });
+        const payload:unknown=await response.json();
+        if(!response.ok)throw new Error(responseError(payload));
+
+        const result=recommendationResponseSchema.safeParse(payload);
+        if(!result.success)throw new Error("Сервер вернул рекомендации в неверном формате.");
+        if(active) {
+          setMatches(result.data.recommendations);
+          setSource(result.data.source);
+        }
+      } catch(error) {
+        if(active)setError(error instanceof Error?error.message:"Не удалось связаться с сервером.");
+      } finally {
+        if(active)setLoading(false);
+      }
     }
-    setSwipes(readTraitSwipes());
-    fetch("/api/animals").then(async response=>{
-      if(!response.ok)throw new Error(`HTTP ${response.status}`);
-      const data=await response.json();
-      if(!Array.isArray(data.animals))throw new Error("Список животных отсутствует.");
-      setAnimals(data.animals);
-      setSource(data.source==="supabase"?"supabase":"demo");
-    }).catch(()=>{
-      setError("Не удалось обновить список приюта; показаны тестовые данные.");
-    });
+
+    void loadRecommendations();
+    return ()=>{active=false};
   },[]);
-  const list=useMemo(()=>recommendations(animals,profile,swipes),[animals,profile,swipes]);
-  const top=list[0];
-  if(!top)return <main className="empty"><h1>Подтверждённых вариантов пока нет</h1><p>Попробуйте уточнить условия или обратитесь к команде приюта.</p><Link className="button" href="/chat">Вернуться к диалогу</Link></main>;
+
+  if(loading) {
+    return <main className="empty"><h1>Подбираем варианты…</h1><p>Проверяем условия и известные характеристики животных.</p></main>;
+  }
+
+  if(error) {
+    return <main className="empty">
+      <h1>Не удалось рассчитать подбор</h1>
+      <p role="alert">{error}</p>
+      <Link className="button" href="/chat">Вернуться к диалогу</Link>
+    </main>;
+  }
+
+  if(matches.length===0) {
+    return <main className="empty">
+      <h1>Подтверждённых вариантов пока нет</h1>
+      <p>Попробуйте уточнить условия или обратитесь к команде приюта.</p>
+      <Link className="button" href="/chat">Вернуться к диалогу</Link>
+    </main>;
+  }
+
+  const top=matches[0];
   const animal=top.animal;
+  const hasScoredMatch=matches.some(match=>match.score!==null);
+  if(!hasScoredMatch&&top.swipeSignal<=0) {
+    return <main className="empty">
+      <h1>Пока недостаточно данных для подбора</h1>
+      <p>Мы не будем показывать произвольный процент совместимости. Ответьте на вопросы в чате или оцените характеристики животных.</p>
+      <Link className="button" href="/chat">Вернуться к диалогу</Link>
+    </main>;
+  }
+
   return <main className="results">
-    <span className="eyebrow">{source==="supabase"?"ДАННЫЕ ПРИЮТА":"ТЕСТОВЫЕ ДАННЫЕ"} · Ориентировочная рекомендация</span>
-    <h1>Кажется, мы нашли пару!</h1>
-    <p className="notice">Это оценка алгоритма, а не гарантия успешного пристройства. Реакции на характеристики учтены в сортировке.</p>
-    {error&&<p className="notice" role="status">{error}</p>}
-    <section className="best"><img src={animal.image_url} alt={animal.name}/><div>
-      <div className="score">{top.score}%</div><h2>{animal.name}, {animal.age_years} г.</h2><p>{animal.description}</p>
-      <h3>Почему может подойти</h3><ul>{(top.matches.length?top.matches:["Базовые предпочтения пока заполнены не полностью"]).map(item=><li key={item}>{item}</li>)}</ul>
-      {[...top.risks,...top.questions].length>0&&<p className="risk"><AlertCircle/> {[...top.risks,...top.questions].join(" ")}</p>}
-      <div className="actions"><Link className="button" href={`/animals/${animal.id}`}>Подробнее <ArrowRight/></Link><Link className="button ghost" href={`/adoption?animal=${animal.id}`}>Хочу познакомиться</Link></div>
-    </div></section>
-    <h2>Ещё можно посмотреть</h2>
-    <div className="grid">{list.slice(1,5).map(match=><Link className="mini" href={`/animals/${match.animal.id}`} key={match.animal.id}><img src={match.animal.image_url} alt=""/><b>{match.animal.name}</b><span>{match.score}% совпадение</span></Link>)}</div>
+    <span className="eyebrow">{source==="demo"?"ТЕСТОВЫЕ ДАННЫЕ":source==="mixed"?"В БАЗЕ ЕСТЬ ТЕСТОВЫЕ КАРТОЧКИ":"КАТАЛОГ ИЗ БАЗЫ"} · Ориентировочная рекомендация</span>
+    <h1>{top.score===null?"Варианты с учётом ваших свайпов":"Кажется, мы нашли пару!"}</h1>
+    <p className="notice">{top.score===null
+      ?"Данных недостаточно для расчёта процента. Варианты упорядочены только по реакциям на характеристики."
+      :"Процент — оценка алгоритма, не вероятность успешного пристройства. Неизвестные сведения не считаются совпадениями; свайпы влияют только на порядок вариантов."}</p>
+    {notice&&<p className="notice" role="status">{notice}</p>}
+    <section className="best">
+      <img src={animal.image_url} alt={animal.name}/>
+      <div>
+        <div className="score">{top.score===null?"—":`${top.score}%`}</div>
+        <p className="data-completeness">Полнота данных для сравнения: {top.dataCompleteness}%</p>
+        <h2>{animal.name}, {animal.age_years} г.</h2>
+        <p>{animal.description}</p>
+        <p className="notice" role="note"><strong>Почему этот вариант:</strong> {top.explanation}</p>
+        <h3>Совпадения</h3>
+        {top.matches.length
+          ? <ul>{top.matches.map(item=><li key={item}>{item}</li>)}</ul>
+          : <p>Пока нет подтверждённых совпадений по заполненным критериям.</p>}
+        {top.mismatches.length>0&&<section className="result-notes">
+          <h3>Несовпадения</h3>
+          <ul>{top.mismatches.map(item=><li key={item}>{item}</li>)}</ul>
+        </section>}
+        {top.risks.length>0&&<section className="result-notes risk">
+          <h3><AlertCircle/> Возможные сложности</h3>
+          <ul>{top.risks.map(item=><li key={item}>{item}</li>)}</ul>
+        </section>}
+        {top.questions.length>0&&<section className="result-notes">
+          <h3>Что уточнить</h3>
+          <ul>{top.questions.map(item=><li key={item}>{item}</li>)}</ul>
+        </section>}
+        <div className="actions">
+          <Link className="button" href={`/animals/${animal.id}`}>Подробнее <ArrowRight/></Link>
+          <Link className="button ghost" href={`/adoption?animal=${animal.id}`}>Хочу познакомиться</Link>
+        </div>
+      </div>
+    </section>
+    {matches.length>1&&<>
+      <h2>Ещё можно посмотреть</h2>
+      <div className="grid">{matches.slice(1,5).map(match=><Link className="mini" href={`/animals/${match.animal.id}`} key={match.animal.id}>
+        <img src={match.animal.image_url} alt=""/>
+        <b>{match.animal.name}</b>
+        <span>{match.score===null?"Недостаточно данных":`${match.score}% совпадение`}</span>
+      </Link>)}</div>
+    </>}
   </main>;
 }

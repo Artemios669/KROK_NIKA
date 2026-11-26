@@ -8,7 +8,7 @@ import {Animal} from "@/types/animal";
 
 export function CharacteristicSwipe({onBack}:{onBack?:()=>void}){
   const [animals,setAnimals]=useState<Animal[]>([]);
-  const [source,setSource]=useState<"demo"|"supabase">("demo");
+  const [source,setSource]=useState<"demo"|"supabase"|"mixed">("demo");
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [swipes,setSwipes]=useState<SwipeReaction[]>([]);
@@ -25,7 +25,7 @@ export function CharacteristicSwipe({onBack}:{onBack?:()=>void}){
       const data=await response.json();
       if(!Array.isArray(data.animals))throw new Error("Список карточек отсутствует.");
       setAnimals(data.animals);
-      setSource(data.source==="supabase"?"supabase":"demo");
+      setSource(data.source==="supabase"||data.source==="mixed"?data.source:"demo");
     }).catch(()=>{
       setAnimals(demoAnimals);
       setSource("demo");
@@ -77,7 +77,7 @@ export function CharacteristicSwipe({onBack}:{onBack?:()=>void}){
   return <section className="trait-swipe">
     <div className="trait-heading">
       {onBack&&<button className="trait-back" onClick={onBack}><ArrowLeft size={17}/> Вернуться к диалогу</button>}
-      <span className="eyebrow">{source==="supabase"?"ПРОВЕРЕННЫЕ ДАННЫЕ ПРИЮТА":"ТЕСТОВЫЕ ДАННЫЕ"} · ДО {MAX_CHARACTERISTIC_CARDS} КАРТОЧЕК</span>
+      <span className="eyebrow">{source==="demo"?"ТЕСТОВЫЕ ДАННЫЕ":source==="mixed"?"В БАЗЕ ЕСТЬ ТЕСТОВЫЕ КАРТОЧКИ":"КАТАЛОГ ИЗ БАЗЫ"} · ДО {MAX_CHARACTERISTIC_CARDS} КАРТОЧЕК</span>
       <h1>Выбирайте характеристики</h1>
       <p>Свайпайте особенности питомцев, а не их фотографии или имена. Неизвестные сведения не придумываем.</p>
     </div>

@@ -1,5 +1,28 @@
-import {getOpenAI} from "@/lib/ai/client";import {ValidatedProfile,userProfileSchema} from "@/lib/validation/profile";
+import {getOpenAI} from "@/lib/ai/client";
+import {responseSchema} from "@/lib/ai/response-schema";
+import {ValidatedProfile,userProfileSchema} from "@/lib/validation/profile";
+
 type History={role:"assistant"|"user";text:string};
-const system=`Ты — интеллектуальный помощник приюта НИКА. Общайся по-русски, тепло и ненавязчиво. Твоя цель — узнать условия жизни, семью, распорядок, опыт и готовность к уходу, а затем предпочтения. Не превращай разговор в анкету: задавай только один естественный вопрос за раз и не повторяй уже полученные сведения. Не выдумывай факты и не подменяй неизвестное значением false. Если условия могут быть небезопасны, скажи об этом бережно. Не убеждай взять конкретное животное. Основные поля: условия проживания, семья, время в одиночестве и тип животного. Заверши анкету только когда они известны или пользователь явно пропустил их.`;
-export const responseSchema={type:"object",additionalProperties:false,required:["message","profile"],properties:{message:{type:"string"},profile:{type:"object",additionalProperties:false,required:["housing","household","lifestyle","experience","preferences","readiness","missing_fields","completed"],properties:{housing:{type:"object",additionalProperties:false,required:["type","size","living_conditions","yard_available"],properties:{type:{type:["string","null"]},size:{type:["string","null"]},living_conditions:{type:["string","null"]},yard_available:{type:["boolean","null"]}}},household:{type:"object",additionalProperties:false,required:["adults","children","children_ages","other_animals"],properties:{adults:{type:["number","null"]},children:{type:["number","null"]},children_ages:{type:"array",items:{type:"number"}},other_animals:{type:"array",items:{type:"string"}}}},lifestyle:{type:"object",additionalProperties:false,required:["works_full_time","hours_away_daily","activity_level","walks_per_day"],properties:{works_full_time:{type:["boolean","null"]},hours_away_daily:{type:["number","null"]},activity_level:{type:["string","null"],enum:["low","moderate","high",null]},walks_per_day:{type:["number","null"]}}},experience:{type:"object",additionalProperties:false,required:["has_pet_experience","care_experience"],properties:{has_pet_experience:{type:["boolean","null"]},care_experience:{type:["string","null"]}}},preferences:{type:"object",additionalProperties:false,required:["animal_type","preferred_size","preferred_age","activity","character","colors"],properties:{animal_type:{type:["string","null"],enum:["dog","cat",null]},preferred_size:{type:["string","null"],enum:["small","medium","large",null]},preferred_age:{type:["string","null"]},activity:{type:["string","null"],enum:["low","moderate","high",null]},character:{type:"array",items:{type:"string"}},colors:{type:"array",items:{type:"string"}}}},readiness:{type:"object",additionalProperties:false,required:["special_care","financial_readiness_confirmed"],properties:{special_care:{type:["boolean","null"]},financial_readiness_confirmed:{type:["boolean","null"]}}},missing_fields:{type:"array",items:{type:"string"}},completed:{type:"boolean"}}}}} as const;
-export async function askAssistant(message:string,profile:ValidatedProfile,history:History[]){const client=getOpenAI();if(!client)return null;const transcript=history.slice(-10).map(x=>`${x.role=== "user"?"Пользователь":"Помощник"}: ${x.text}`).join("\n");const input=`Текущий профиль JSON:\n${JSON.stringify(profile)}\n\nНедавний диалог:\n${transcript}\n\nНовое сообщение пользователя: ${message}`;const response=await client.responses.create({model:process.env.OPENAI_MODEL||"gpt-4o-mini",input:[{role:"system",content:system},{role:"user",content:input}],text:{format:{type:"json_schema",name:"nika_profile_update",strict:true,schema:responseSchema}}});if(!response.output_text)throw new Error("empty AI response");const parsed=JSON.parse(response.output_text);return {message:String(parsed.message).slice(0,1200),profile:userProfileSchema.parse(parsed.profile)};}
+
+const system=`Ты — интеллектуальный помощник приюта НИКА. Общайся по-русски тепло и естественно. Узнавай сначала условия жизни, семью, распорядок, опыт и готовность к уходу; предпочтения спрашивай ближе к завершению. Задавай только один связный вопрос за раз. Не повторяй известное. Не выдумывай факты, не подменяй неизвестное false и не делай выводов по доходу или семейному положению. Если пользователь пропустил тему, оставь её неизвестной и не возвращайся к ней. Если сведения противоречат друг другу, попроси уточнить.`;
+
+export {responseSchema};
+
+export async function askAssistant(message:string,profile:ValidatedProfile,history:History[]) {
+  const client=getOpenAI();
+  if(!client)return null;
+
+  const transcript=history.slice(-10).map(item=>`${item.role==="user"?"Пользователь":"Помощник"}: ${item.text}`).join("\n");
+  const input=`Текущий профиль JSON:\n${JSON.stringify(profile)}\n\nНедавний диалог:\n${transcript}\n\nНовое сообщение пользователя: ${message}`;
+  const response=await client.responses.create({
+    model:process.env.OPENAI_MODEL||"gpt-4o-mini",
+    input:[{role:"system",content:system},{role:"user",content:input}],
+    text:{format:{type:"json_schema",name:"nika_profile_update",strict:true,schema:responseSchema}},
+  });
+  if(!response.output_text)throw new Error("empty AI response");
+  const parsed=JSON.parse(response.output_text);
+  return {
+    message:String(parsed.message).slice(0,1200),
+    profile:userProfileSchema.parse(parsed.profile),
+  };
+}
