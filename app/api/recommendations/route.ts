@@ -2,8 +2,8 @@ import {NextResponse} from "next/server";
 import {getSupabase} from "@/lib/supabase/server";
 import {animals as demoAnimals,getAnimalCatalogSource} from "@/lib/demo-data";
 import {recommendations} from "@/lib/matching";
-import {animalsSchema} from "@/lib/validation/animal";
 import {recommendationRequestSchema} from "@/lib/validation/recommendations";
+import {loadSupabaseAnimalCatalog} from "@/lib/supabase/animal-catalog";
 
 export async function POST(req:Request) {
   let body:unknown;
@@ -23,33 +23,30 @@ export async function POST(req:Request) {
     return NextResponse.json({
       recommendations:recommendations(demoAnimals,parsed.data.profile,parsed.data.swipes),
       source:"demo",
+      catalogRecords:demoAnimals.length,
+      eligibleRecords:demoAnimals.filter(animal=>animal.adoption_available&&animal.type!=="unknown").length,
+      unavailableRecords:demoAnimals.filter(animal=>!animal.adoption_available).length,
+      unsupportedTypeRecords:demoAnimals.filter(animal=>animal.adoption_available&&animal.type==="unknown").length,
+      unconfirmedAvailabilityRecords:0,
     });
   }
 
   try {
-    const {data,error}=await supabase
-      .from("animals")
-      .select("*")
-      .eq("adoption_available",true)
-      .order("last_updated",{ascending:false});
-
-    if(error) {
-      console.error("Supabase recommendation query failed:",error.message);
-      return NextResponse.json({error:"Не удалось загрузить животных из Supabase."},{status:502});
-    }
-
-    const validatedAnimals=animalsSchema.safeParse(data||[]);
-    if(!validatedAnimals.success) {
-      console.error("Supabase returned invalid animal data:",validatedAnimals.error.issues);
-      return NextResponse.json({error:"В базе есть карточки животных с некорректными данными."},{status:500});
-    }
+    const catalog=await loadSupabaseAnimalCatalog(supabase);
+    const availableAnimals=catalog.animals.filter(animal=>animal.adoption_available);
+    const eligibleAnimals=availableAnimals.filter(animal=>animal.type!=="unknown");
 
     return NextResponse.json({
-      recommendations:recommendations(validatedAnimals.data,parsed.data.profile,parsed.data.swipes),
-      source:getAnimalCatalogSource(validatedAnimals.data),
+      recommendations:recommendations(eligibleAnimals,parsed.data.profile,parsed.data.swipes),
+      source:catalog.table==="animalsss"?"supabase":getAnimalCatalogSource(eligibleAnimals),
+      catalogRecords:catalog.totalRecords,
+      eligibleRecords:eligibleAnimals.length,
+      unavailableRecords:catalog.unavailableRecords,
+      unsupportedTypeRecords:availableAnimals.length-eligibleAnimals.length,
+      unconfirmedAvailabilityRecords:catalog.unconfirmedAvailability,
     });
   } catch(error) {
     console.error("Supabase recommendation request failed:",error);
-    return NextResponse.json({error:"Supabase временно недоступен."},{status:502});
+    return NextResponse.json({error:"Не удалось загрузить и проверить каталог Supabase."},{status:502});
   }
 }

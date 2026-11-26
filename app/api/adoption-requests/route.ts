@@ -4,12 +4,20 @@ import {getSupabase} from "@/lib/supabase/server";
 import {userProfileSchema} from "@/lib/validation/profile";
 
 const requestSchema=z.object({
-  animal_id:z.string().uuid().nullable(),
+  animal_id:z.string().uuid().nullable().optional(),
+  source_animal_id:z.string().trim().min(1).max(500).optional(),
+  source_animal_name:z.string().trim().min(1).max(200).optional(),
   contact_name:z.string().trim().min(2).max(80),
   contact_email:z.string().trim().email().max(120),
   message:z.string().trim().max(1000).optional(),
   request_type:z.enum(["adoption","guardianship"]),
   user_profile:userProfileSchema.nullable().optional(),
+}).refine(body=>!body.source_animal_id||Boolean(body.source_animal_name),{
+  path:["source_animal_name"],
+  message:"Для импортированного животного нужно передать его имя.",
+}).refine(body=>!(body.animal_id&&body.source_animal_id),{
+  path:["animal_id"],
+  message:"Используйте только один тип идентификатора животного.",
 });
 
 export async function POST(req:Request) {

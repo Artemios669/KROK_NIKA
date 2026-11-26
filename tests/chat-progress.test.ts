@@ -1,6 +1,6 @@
 import {describe,expect,it} from "vitest";
-import {createDemoChatReply} from "@/lib/chat/demo";
-import {getChatProgress,hasExperienceCareDetails,normalizeChatProfile,preserveSkippedTopic} from "@/lib/chat/progress";
+import {createDemoChatReply,extractProfileFacts} from "@/lib/chat/demo";
+import {getChatProgress,hasExperienceCareDetails,mergeChatProfile,normalizeChatProfile,preserveSkippedTopic} from "@/lib/chat/progress";
 import {getChatScenario} from "@/lib/chat/scenarios";
 import {userProfileSchema} from "@/lib/validation/profile";
 import {emptyProfile} from "@/types/user";
@@ -20,6 +20,84 @@ describe("chat progress",()=>{
     expect(reply.profile.household.children_ages).toEqual([5,8]);
     expect(reply.profile.household.other_animals).toEqual(["кошка"]);
     expect(reply.profile.household.other_animals_confirmed).toBe(true);
+  });
+
+  it("extracts household and routine facts even when they are unrelated to the current topic",()=>{
+    const profile=extractProfileFacts(
+      "Живём в квартире, двое детей 5 и 8 лет, других животных нет. Обычно меня нет дома 4 часа",
+      emptyProfile,
+      "routine",
+    );
+
+    expect(profile.housing.type).toBe("квартира");
+    expect(profile.household.children).toBe(2);
+    expect(profile.household.children_ages).toEqual([5,8]);
+    expect(profile.household.other_animals_confirmed).toBe(true);
+    expect(profile.lifestyle.hours_away_daily).toBe(4);
+  });
+
+  it("uses an explicit correction to update a previously collected child count",()=>{
+    const profile=structuredClone(emptyProfile);
+    profile.household.children=2;
+    const corrected=extractProfileFacts("Не двое детей, а трое",profile,"housing");
+
+    expect(corrected.household.children).toBe(3);
+  });
+
+  it("does not treat a past or wanted cat as a current household pet or type preference",()=>{
+    const past=extractProfileFacts("Раньше у меня была кошка",emptyProfile,"routine");
+    const wanted=extractProfileFacts("Хочу кошку",emptyProfile,"housing");
+    const careExperience=extractProfileFacts("Был опыт ухода за собакой",emptyProfile,"experience");
+    const relativePet=extractProfileFacts("У сестры есть кошка",emptyProfile,"routine");
+
+    expect(past.household.other_animals_confirmed).toBeNull();
+    expect(past.preferences.animal_type).toBeNull();
+    expect(wanted.household.other_animals_confirmed).toBeNull();
+    expect(wanted.preferences.animal_type).toBe("cat");
+    expect(careExperience.household.other_animals_confirmed).toBeNull();
+    expect(careExperience.experience.has_pet_experience).toBe(true);
+    expect(relativePet.household.other_animals_confirmed).toBeNull();
+  });
+
+  it("recognizes an adopted household cat as prior experience without inventing medical-care details",()=>{
+    const profile=extractProfileFacts(
+      "Живу в частном доме с детишками 4 лет и кошкой, которую мы взяли 5 лет назад в приюте",
+      emptyProfile,
+      "housing",
+    );
+
+    expect(profile.experience.has_pet_experience).toBe(true);
+    expect(profile.experience.care_experience).toBeNull();
+    expect(profile.household.other_animals).toEqual(["кошка"]);
+    expect(getChatScenario(profile,"animal_type").question).not.toContain("Был ли у вас раньше опыт");
+    expect(getChatScenario(profile,"animal_type").question).toContain("серьёзной болезни");
+  });
+
+  it("preserves deterministic facts when the generated profile omits them",()=>{
+    const extracted=extractProfileFacts(
+      "Живём в квартире, двое детей 5 и 8 лет, других животных нет",
+      emptyProfile,
+      "housing",
+    );
+    const merged=mergeChatProfile(emptyProfile,extracted,emptyProfile);
+
+    expect(merged.household.children).toBe(2);
+    expect(merged.household.children_ages).toEqual([5,8]);
+    expect(merged.household.other_animals_confirmed).toBe(true);
+  });
+
+  it("preserves previously known fields while adding facts from the latest answer",()=>{
+    const previous=structuredClone(emptyProfile);
+    previous.housing.type="квартира";
+    previous.household.children=0;
+    previous.household.other_animals_confirmed=true;
+    const extracted=extractProfileFacts("Обычно меня нет дома 4 часа",previous,"routine");
+    const merged=mergeChatProfile(previous,extracted,emptyProfile);
+
+    expect(merged.housing.type).toBe("квартира");
+    expect(merged.household.children).toBe(0);
+    expect(merged.household.other_animals_confirmed).toBe(true);
+    expect(merged.lifestyle.hours_away_daily).toBe(4);
   });
 
   it("does not mistake a wanted or past animal for a current household pet",()=>{
@@ -137,6 +215,19 @@ describe("chat progress",()=>{
     });
     expect(routine.profile.lifestyle.hours_away_daily).toBe(7);
     expect(routine.profile.lifestyle.works_full_time).toBeNull();
+  });
+
+  it("stores separate readiness answers when the combined care question gets a short reply",()=>{
+    const reply=createDemoChatReply({
+      message:"Да, готов",
+      profile:emptyProfile,
+      currentTopic:"special_care",
+      skippedTopics:[],
+      skipCurrentQuestion:false,
+    });
+
+    expect(reply.profile.readiness.special_care).toBe(true);
+    expect(reply.profile.readiness.financial_readiness_confirmed).toBe(true);
   });
 
   it("keeps skipped fields unknown and offers the next topic",()=>{

@@ -6,6 +6,7 @@ import {emptyProfile} from "@/types/user";
 import {readTraitSwipes} from "@/lib/characteristics";
 import {userProfileSchema} from "@/lib/validation/profile";
 import {recommendationResponseSchema,RecommendationMatch} from "@/lib/validation/recommendations";
+import {formatAnimalAge} from "@/lib/animal-catalog";
 
 function responseError(value:unknown) {
   if(typeof value==="object"&&value!==null&&"error" in value&&typeof value.error==="string")return value.error;
@@ -15,6 +16,7 @@ function responseError(value:unknown) {
 export default function Results(){
   const [matches,setMatches]=useState<RecommendationMatch[]>([]);
   const [source,setSource]=useState<"demo"|"supabase"|"mixed">("demo");
+  const [catalogCounts,setCatalogCounts]=useState<{total:number;eligible:number;unavailable:number;unsupportedType:number;unconfirmedAvailability:number}|null>(null);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
@@ -57,6 +59,15 @@ export default function Results(){
         if(active) {
           setMatches(result.data.recommendations);
           setSource(result.data.source);
+          if(result.data.catalogRecords!==undefined&&result.data.eligibleRecords!==undefined) {
+            setCatalogCounts({
+              total:result.data.catalogRecords,
+              eligible:result.data.eligibleRecords,
+              unavailable:result.data.unavailableRecords||0,
+              unsupportedType:result.data.unsupportedTypeRecords||0,
+              unconfirmedAvailability:result.data.unconfirmedAvailabilityRecords||0,
+            });
+          }
         }
       } catch(error) {
         if(active)setError(error instanceof Error?error.message:"Не удалось связаться с сервером.");
@@ -85,6 +96,11 @@ export default function Results(){
     return <main className="empty">
       <h1>Подтверждённых вариантов пока нет</h1>
       <p>Попробуйте уточнить условия или обратитесь к команде приюта.</p>
+      {catalogCounts&&<p>{source==="demo"?"Тестовый каталог":"Источник — Supabase"}: доступно для сравнения {catalogCounts.eligible} из {catalogCounts.total} записей.
+        {catalogCounts.unavailable>0&&` Недоступны для пристройства: ${catalogCounts.unavailable}.`}
+        {catalogCounts.unsupportedType>0&&` Тип не распознан: ${catalogCounts.unsupportedType}.`}
+        {catalogCounts.unconfirmedAvailability>0&&` Статус доступности не указан; по правилу каталога эти записи учитываются как доступные: ${catalogCounts.unconfirmedAvailability}.`}
+      </p>}
       <Link className="button" href="/chat">Вернуться к диалогу</Link>
     </main>;
   }
@@ -106,13 +122,21 @@ export default function Results(){
     <p className="notice">{top.score===null
       ?"Данных недостаточно для расчёта процента. Варианты упорядочены только по реакциям на характеристики."
       :"Процент — оценка алгоритма, не вероятность успешного пристройства. Неизвестные сведения не считаются совпадениями; свайпы влияют только на порядок вариантов."}</p>
+    {catalogCounts&&<p className="catalog-status" role="status">
+      {source==="demo"?"Тестовые карточки":source==="mixed"?"Смешанный каталог":"Источник — Supabase"}: в подборе участвуют {catalogCounts.eligible} из {catalogCounts.total} записей.
+      {catalogCounts.unavailable>0&&` Не доступны для пристройства: ${catalogCounts.unavailable}.`}
+      {catalogCounts.unsupportedType>0&&` Тип не распознан: ${catalogCounts.unsupportedType}.`}
+      {catalogCounts.unconfirmedAvailability>0&&` Статус доступности не указан; по правилу каталога эти записи учитываются как доступные: ${catalogCounts.unconfirmedAvailability}.`}
+    </p>}
     {notice&&<p className="notice" role="status">{notice}</p>}
     <section className="best">
-      <img src={animal.image_url} alt={animal.name}/>
+      {animal.image_url
+        ?<img src={animal.image_url} alt={animal.name}/>
+        :<div className="best-photo-placeholder">Фото не добавлено</div>}
       <div>
         <div className="score">{top.score===null?"—":`${top.score}%`}</div>
         <p className="data-completeness">Полнота данных для сравнения: {top.dataCompleteness}%</p>
-        <h2>{animal.name}, {animal.age_years} г.</h2>
+        <h2>{animal.name}{animal.age_years!==null||animal.age_text?`, ${formatAnimalAge(animal)}`:""}</h2>
         <p>{animal.description}</p>
         <p className="notice" role="note"><strong>Почему этот вариант:</strong> {top.explanation}</p>
         <h3>Совпадения</h3>
@@ -132,14 +156,14 @@ export default function Results(){
           <ul>{top.questions.map(item=><li key={item}>{item}</li>)}</ul>
         </section>}
         <div className="actions">
-          <Link className="button" href={`/animals/${animal.id}`}>Подробнее <ArrowRight/></Link>
-          <Link className="button ghost" href={`/adoption?animal=${animal.id}`}>Хочу познакомиться</Link>
+          <Link className="button" href={`/animals/${encodeURIComponent(animal.id)}`}>Подробнее <ArrowRight/></Link>
+          <Link className="button ghost" href={`/adoption?animal=${encodeURIComponent(animal.id)}`}>Хочу познакомиться</Link>
         </div>
       </div>
     </section>
     {matches.length>1&&<>
       <h2>Ещё можно посмотреть</h2>
-      <div className="grid">{matches.slice(1,5).map(match=><Link className="mini" href={`/animals/${match.animal.id}`} key={match.animal.id}>
+      <div className="grid">{matches.slice(1,5).map(match=><Link className="mini" href={`/animals/${encodeURIComponent(match.animal.id)}`} key={match.animal.id}>
         <img src={match.animal.image_url} alt=""/>
         <b>{match.animal.name}</b>
         <span>{match.score===null?"Недостаточно данных":`${match.score}% совпадение`}</span>

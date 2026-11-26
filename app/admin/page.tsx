@@ -1,12 +1,16 @@
 "use client";
 import {useState} from "react";
+import {animalTypeLabel} from "@/lib/animal-catalog";
+import type {Animal} from "@/types/animal";
 type DashboardRow={
   id:string;
   name?:string;
-  type?:string;
+  type?:Animal["type"];
   image_url?:string|null;
   animals?:{name:string}|null;
   animal_id?:string;
+  source_animal_id?:string|null;
+  source_animal_name?:string|null;
   contact_name?:string;
   contact_email?:string;
   question?:string;
@@ -18,7 +22,7 @@ type DashboardRow={
   answered_at?:string|null;
   adoption_available?:boolean;
 };
-type DashboardData={animals:DashboardRow[];questions:DashboardRow[];requests:DashboardRow[];mode:string};
+type DashboardData={animals:DashboardRow[];questions:DashboardRow[];requests:DashboardRow[];mode:string;totalAnimalRecords?:number};
 
 const requestStatusLabels:Record<string,string>={
   pending:"Новая",
@@ -125,6 +129,7 @@ export default function Admin(){
   return <main className="admin">
     <span className="demo">ДАННЫЕ SUPABASE</span>
     <h1>Управление</h1>
+    {data.totalAnimalRecords!==undefined&&<p>В выбранной таблице каталога: {data.totalAnimalRecords} записей.</p>}
     <div className="tabs">
       {["Животные","Вопросы","Заявки"].map(item=><button className={tab===item?"active":""} onClick={()=>setTab(item)} key={item}>{item}</button>)}
     </div>
@@ -137,12 +142,12 @@ export default function Admin(){
             {tab==="Животные"
               ? <div className="admin-card-heading">
                   {typeof row.image_url==="string"&&<img src={row.image_url} alt=""/>}
-                  <div><b>{row.name||""}</b><span>{row.type==="cat"?"Кошка":"Собака"} · {row.adoption_available?"доступно":"не доступно"}</span></div>
+                  <div><b>{row.name||""}</b><span>{row.type?animalTypeLabel(row.type):"Вид не указан"} · {row.adoption_available?"доступно":"не доступно"}</span></div>
                 </div>
               : tab==="Вопросы"
                 ? <>
                     <div className="admin-card-heading">
-                      <div><b>{row.animals?.name||"Животное"}</b><span>{row.status==="answered"?"Ответ дан":"Ожидает ответа"}{row.created_at?` · ${new Date(row.created_at).toLocaleString("ru-RU")}`:""}</span></div>
+                      <div><b>{row.source_animal_name||row.animals?.name||"Животное"}</b><span>{row.status==="answered"?"Ответ дан":"Ожидает ответа"}{row.created_at?` · ${new Date(row.created_at).toLocaleString("ru-RU")}`:""}</span></div>
                     </div>
                     <p className="admin-card-text">{row.question}</p>
                     {row.status==="answered"
@@ -158,7 +163,7 @@ export default function Admin(){
                       <div><b>{row.contact_name}</b><span>{row.contact_email} · {row.request_type==="guardianship"?"Опека":"Знакомство / пристройство"}</span></div>
                       <span className="admin-status">{requestStatusLabels[row.status||"pending"]||row.status}</span>
                     </div>
-                    <p className="admin-card-text">Животное: {row.animals?.name||"не выбрано"}</p>
+                    <p className="admin-card-text">Животное: {row.source_animal_name||row.animals?.name||"не выбрано"}</p>
                     {row.message&&<p className="admin-card-text">{row.message}</p>}
                     <label className="admin-status-control">Статус заявки
                       <select value={row.status||"pending"} disabled={updatingId===row.id} onChange={event=>updateRequestStatus(row.id,event.target.value)}>

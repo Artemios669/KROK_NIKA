@@ -4,13 +4,15 @@ import Link from "next/link";
 import {animals as demoAnimals} from "@/lib/demo-data";
 import {useEffect,useState} from "react";
 import {Animal} from "@/types/animal";
+import {animalTypeLabel,formatAnimalAge} from "@/lib/animal-catalog";
 
-const databaseIdPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type AnsweredQuestion={id:string;question:string;answer:string;answered_at:string};
 
 export default function AnimalPage() {
   const {id}=useParams<{id:string}>();
   const [animal,setAnimal]=useState<Animal|undefined>(()=>demoAnimals.find(item=>item.id===id));
+  const [catalogSource,setCatalogSource]=useState<"demo"|"supabase"|"mixed">("demo");
+  const [idKind,setIdKind]=useState<"demo"|"uuid"|"text">("demo");
   const [loaded,setLoaded]=useState(false);
   const [question,setQuestion]=useState("");
   const [sent,setSent]=useState(false);
@@ -23,9 +25,17 @@ export default function AnimalPage() {
   useEffect(()=>{
     let active=true;
     fetch("/api/animals")
-      .then(response=>response.json())
+      .then(async response=>{
+        const data=await response.json();
+        if(!response.ok)throw new Error(data.error||"Не удалось загрузить каталог.");
+        return data;
+      })
       .then(data=>{
-        if(active)setAnimal(data.animals?.find((item:Animal)=>item.id===id));
+        if(active) {
+          setAnimal(data.animals?.find((item:Animal)=>item.id===id));
+          setCatalogSource(data.source==="supabase"||data.source==="mixed"?data.source:"demo");
+          setIdKind(data.idKind==="text"||data.idKind==="uuid"?data.idKind:"demo");
+        }
       })
       .catch(()=>{
         if(active)setError("Не удалось загрузить данные животного.");
@@ -36,11 +46,19 @@ export default function AnimalPage() {
     return ()=>{active=false};
   },[id]);
 
+  const isDatabaseAnimal=Boolean(
+    animal&&catalogSource!=="demo"&&
+    (catalogSource==="supabase"||!demoAnimals.some(item=>item.id===animal.id)),
+  );
+
   useEffect(()=>{
-    if(!databaseIdPattern.test(id))return;
+    if(!isDatabaseAnimal)return;
     let active=true;
     setLoadingAnswers(true);
-    fetch(`/api/questions?animal_id=${encodeURIComponent(id)}`)
+    const query=idKind==="uuid"
+      ?`animal_id=${encodeURIComponent(id)}`
+      :`source_animal_id=${encodeURIComponent(id)}`;
+    fetch(`/api/questions?${query}`)
       .then(async response=>{
         const result=await response.json();
         if(!response.ok)throw new Error(result.error||"Не удалось загрузить ответы.");
@@ -56,7 +74,7 @@ export default function AnimalPage() {
         if(active)setLoadingAnswers(false);
       });
     return ()=>{active=false};
-  },[id]);
+  },[id,idKind,isDatabaseAnimal]);
 
   async function sendQuestion() {
     setError("");
@@ -65,7 +83,12 @@ export default function AnimalPage() {
       const response=await fetch("/api/questions",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({animal_id:id,question}),
+        body:JSON.stringify({
+          ...(idKind==="uuid"
+            ?{animal_id:id}
+            :{source_animal_id:id,source_animal_name:animal?.name}),
+          question,
+        }),
       });
       const result=await response.json();
       if(!response.ok) {
@@ -84,25 +107,28 @@ export default function AnimalPage() {
     return <main className="empty"><h1>{loaded?"Карточка не найдена":"Загружаем карточку…"}</h1></main>;
   }
 
-  const isDatabaseAnimal=databaseIdPattern.test(animal.id);
-
   return (
     <main className="profile">
-      <img className="profile-img" src={animal.image_url} alt={animal.name}/>
+      {animal.image_url
+        ?<img className="profile-img" src={animal.image_url} alt={animal.name}/>
+        :<div className="profile-img trait-photo-placeholder">Фото не добавлено</div>}
       <section>
         <span className="demo">{isDatabaseAnimal?"ДАННЫЕ SUPABASE":"ТЕСТОВАЯ КАРТОЧКА"}</span>
         <h1>{animal.name}</h1>
         <p>{animal.description}</p>
         <div className="facts">
-          <span>{animal.type==="cat"?"Кошка":"Собака"}</span>
-          <span>{animal.age_years} лет</span>
+          <span>{animalTypeLabel(animal.type)}</span>
+          <span>{formatAnimalAge(animal)}</span>
           <span>{animal.size}</span>
           <span>{animal.activity_level} активность</span>
         </div>
+        {animal.shelter&&<p>Приют: {animal.shelter}</p>}
         <h3>Характер</h3>
         <div className="tags">{animal.character.map(item=><b key={item}>{item}</b>)}</div>
+        {animal.care_notes&&<p><b>Особенности ухода:</b> {animal.care_notes}</p>}
+        {animal.health_notes&&<p><b>Здоровье:</b> {animal.health_notes}</p>}
         <p>Пристройство: {animal.adoption_available?"доступно":"недоступно"} · Опека: {animal.guardianship_available?"доступна":"недоступна"}</p>
-        <Link className="button" href={`/adoption?animal=${animal.id}`}>Оставить заявку</Link>
+        <Link className="button" href={`/adoption?animal=${encodeURIComponent(animal.id)}`}>Оставить заявку</Link>
       </section>
       <section className="question">
         <h2>Хотите узнать больше?</h2>

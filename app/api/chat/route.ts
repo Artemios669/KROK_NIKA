@@ -1,13 +1,15 @@
 import {NextResponse} from "next/server";
 import {z} from "zod";
 import {askGemini} from "@/lib/ai/gemini";
-import {createDemoChatReply} from "@/lib/chat/demo";
+import {createDemoChatReply,extractProfileFacts} from "@/lib/chat/demo";
 import {
   ChatTopic,
   chatTopicSchema,
+  findChatProfileConflicts,
   getChatProgress,
   hasExperienceCareDetails,
   isChatTopicComplete,
+  mergeChatProfile,
   normalizeChatProfile,
   preserveSkippedTopic,
 } from "@/lib/chat/progress";
@@ -44,6 +46,8 @@ function isSkipMessage(message:string) {
   return /^(?:пропустить(?:\s+(?:этот\s+)?вопрос)?|пропуск|не хочу отвечать|не знаю|затрудняюсь ответить)[.! ]*$/i.test(message.trim());
 }
 
+const profileConflictPromptPrefix="В профиле обнаружились противоречивые сведения:";
+
 function getApiStatus(error:unknown) {
   if(typeof error==="object"&&error!==null&&"status" in error&&typeof error.status==="number")return error.status;
   return undefined;
@@ -73,35 +77,69 @@ export async function POST(request:Request) {
   const ip=request.headers.get("x-forwarded-for")?.split(",")[0]||"local";
   if(!allowed(ip))return NextResponse.json({error:"Слишком много сообщений. Подождите минуту и повторите попытку."},{status:429});
 
-  const profile=normalizeChatProfile(body.profile||emptyProfile);
   const skippedTopics=body.skippedTopics||[];
+  const history=body.history||[];
+  const storedProfile=normalizeChatProfile(body.profile||emptyProfile);
+  const historicalProfile=history.reduce((collected,item)=>{
+    if(item.role!=="user"||isSkipMessage(item.text))return collected;
+    const topic=getChatProgress(collected,skippedTopics).nextTopic||body.currentTopic||"housing";
+    return extractProfileFacts(item.text,collected,topic);
+  },emptyProfile);
+  const profile=mergeChatProfile(storedProfile,storedProfile,normalizeChatProfile(historicalProfile));
   const progress=getChatProgress(profile,skippedTopics);
-  const currentTopic:ChatTopic=body.currentTopic||progress.nextTopic||"housing";
+  const submittedTopic:ChatTopic=body.currentTopic||progress.nextTopic||"housing";
   const skipCurrentQuestion=body.skipCurrentQuestion===true||isSkipMessage(body.message);
+  const resolvingProfileConflict=history.at(-1)?.role==="assistant"&&
+    history.at(-1)?.text.startsWith(profileConflictPromptPrefix)===true;
   const nextSkippedTopics=new Set(skippedTopics);
 
-  if(skipCurrentQuestion&&!isChatTopicComplete(profile,currentTopic))nextSkippedTopics.add(currentTopic);
+  if(skipCurrentQuestion&&!isChatTopicComplete(profile,submittedTopic))nextSkippedTopics.add(submittedTopic);
+  const extractedProfile=skipCurrentQuestion
+    ?profile
+    :normalizeChatProfile(extractProfileFacts(body.message,profile,submittedTopic));
+  const nextUnresolvedTopic=getChatProgress(extractedProfile,[...nextSkippedTopics]).nextTopic;
+  const topicForGemini=skipCurrentQuestion?submittedTopic:nextUnresolvedTopic||submittedTopic;
 
   try {
     const ai=await askGemini(
       body.message,
-      profile,
-      body.history||[],
-      currentTopic,
+      extractedProfile,
+      history,
+      topicForGemini,
       [...nextSkippedTopics],
       skipCurrentQuestion,
     );
     if(ai) {
+      const profileConflicts=skipCurrentQuestion||resolvingProfileConflict
+        ?[]
+        :findChatProfileConflicts(profile,extractedProfile,ai.profile);
+      const mergedProfile=mergeChatProfile(profile,extractedProfile,ai.profile,resolvingProfileConflict);
       const updatedProfile=skipCurrentQuestion
-        ? preserveSkippedTopic(ai.profile,profile,currentTopic)
-        : normalizeChatProfile(ai.profile);
+        ? preserveSkippedTopic(mergedProfile,profile,submittedTopic)
+        : mergedProfile;
       const responseProgress=getChatProgress(updatedProfile,[...nextSkippedTopics]);
       const needsExperienceFollowUp=!skipCurrentQuestion&&
         responseProgress.nextTopic==="experience"&&
         updatedProfile.experience.has_pet_experience===true&&
         !hasExperienceCareDetails(updatedProfile.experience.care_experience);
+      const nextQuestion=responseProgress.nextTopic
+        ?getChatScenario(updatedProfile,responseProgress.nextTopic).question
+        :null;
+      const acknowledgement=/[?？]/.test(ai.message)?"":ai.message.trim();
+      const conflictMessage=profileConflicts.length
+        ?`${profileConflictPromptPrefix} ${profileConflicts.join(", ")}. Уточните, пожалуйста, какие значения актуальны.`
+        :null;
+      const message=conflictMessage
+        ?conflictMessage
+        :needsExperienceFollowUp
+        ?getChatScenario(updatedProfile,"experience").question
+        :nextQuestion
+          ?[acknowledgement,nextQuestion].filter(Boolean).join(" ")
+          :/[?？]/.test(ai.message)
+            ?"Спасибо, основные темы разобраны. Если захотите, можно перейти к характеристикам животных."
+            :ai.message;
       return NextResponse.json({
-        message:needsExperienceFollowUp?getChatScenario(updatedProfile,"experience").question:ai.message,
+        message,
         profile:updatedProfile,
         mode:"gemini",
         progress:responseProgress,
@@ -119,7 +157,7 @@ export async function POST(request:Request) {
   const result=createDemoChatReply({
     message:body.message,
     profile,
-    currentTopic,
+    currentTopic:submittedTopic,
     skippedTopics:[...nextSkippedTopics],
     skipCurrentQuestion,
   });

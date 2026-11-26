@@ -99,7 +99,7 @@ function explainMatch(match:Pick<Match,"score"|"dataCompleteness"|"matches"|"mis
 }
 
 export function matchAnimal(animal:Animal,profile:UserProfile,swipes:SwipeReaction[]=[]):Match|null {
-  if(!animal.adoption_available)return null;
+  if(!animal.adoption_available||animal.type==="unknown")return null;
   if(profile.preferences.animal_type&&animal.type!==profile.preferences.animal_type)return null;
 
   const requirements=(animal.housing_requirements||[]).map(normalize);
@@ -234,7 +234,10 @@ export function matchAnimal(animal:Animal,profile:UserProfile,swipes:SwipeReacti
   }
 
   for(const pet of profile.household.other_animals) {
-    if(!petKind(pet))pushUnique(questions,`Уточнить у приюта совместимость с животным «${pet}».`);
+    if(!petKind(pet)) {
+      if(animal.good_with_other_animals===false)return null;
+      pushUnique(questions,`Уточнить у приюта совместимость с животным «${pet}».`);
+    }
   }
 
   if(profile.preferences.preferred_size) {
@@ -254,7 +257,7 @@ export function matchAnimal(animal:Animal,profile:UserProfile,swipes:SwipeReacti
       pushUnique(questions,"Уточнить ваш предпочтительный возраст животного.");
     } else {
       const age=animal.age_years;
-      if(Number.isFinite(age)) {
+      if(typeof age==="number"&&Number.isFinite(age)) {
         const ageScore=age>=preferredAge.min&&age<=preferredAge.max?1:0;
         addFactor(3,ageScore,"Возраст соответствует вашему предпочтению","Возраст отличается от предпочтения");
       } else {
@@ -282,6 +285,9 @@ export function matchAnimal(animal:Animal,profile:UserProfile,swipes:SwipeReacti
 
   if(animal.health_notes) {
     pushUnique(risks,"В карточке есть заметка о здоровье. Уточните её содержание у приюта.");
+  }
+  if(animal.care_notes) {
+    pushUnique(risks,"В карточке есть особенности ухода. Обсудите их с приютом.");
   }
 
   const totalWeight=factors.reduce((sum,factor)=>sum+factor.weight,0);
