@@ -6,7 +6,7 @@ import {animals as demoAnimals} from "@/lib/demo-data";
 import {buildCharacteristicCards,MAX_CHARACTERISTIC_CARDS,readTraitSwipes,SwipeReaction} from "@/lib/characteristics";
 import {Animal} from "@/types/animal";
 
-export function CharacteristicSwipe({onBack}:{onBack?:()=>void}){
+export function CharacteristicSwipe({onBack,onShowResults}:{onBack?:()=>void;onShowResults?:()=>void}){
   const [animals,setAnimals]=useState<Animal[]>([]);
   const [source,setSource]=useState<"demo"|"supabase"|"mixed">("demo");
   const [catalogStats,setCatalogStats]=useState<{total:number;eligible:number;unavailable:number;unsupportedType:number;unconfirmedAvailability:number}|null>(null);
@@ -107,7 +107,9 @@ export function CharacteristicSwipe({onBack}:{onBack?:()=>void}){
           <h2>Вы оценили все карточки</h2>
           <p>Все {cards.length} характеристик получили вашу реакцию. Чтобы пройти карточки заново, нажмите «Свайпать снова» — сохранённые реакции будут заменены.</p>
           <button className="button" onClick={restart}><RotateCcw size={16}/> Свайпать снова</button>
-          <Link className="trait-reset" href="/results">Посмотреть подбор <ArrowRight size={17}/></Link>
+          {onShowResults
+            ?<button className="trait-reset" type="button" onClick={onShowResults}>Посмотреть подбор <ArrowRight size={17}/></button>
+            :<Link className="trait-reset" href="/results">Посмотреть подбор <ArrowRight size={17}/></Link>}
         </>}
     </div>:<>
       <div className="trait-count">Карточка {index+1} из {cards.length}</div>
