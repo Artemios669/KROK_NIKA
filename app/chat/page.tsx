@@ -3,6 +3,7 @@
 import {useLayoutEffect,useRef,useState} from "react";
 import {Send} from "lucide-react";
 import {CharacteristicSwipe} from "@/components/characteristic-swipe";
+import {useRoadmap} from "@/components/roadmap-context";
 import {ChatTopic,getChatProgress,chatTopicSchema} from "@/lib/chat/progress";
 import {getChatScenario} from "@/lib/chat/scenarios";
 import {userProfileSchema} from "@/lib/validation/profile";
@@ -19,6 +20,7 @@ const initial:Message={
 };
 
 export default function Chat() {
+  const {setActiveStep}=useRoadmap();
   const [messages,setMessages]=useState<Message[]>([initial]);
   const [value,setValue]=useState("");
   const [profile,setProfile]=useState<UserProfile>(emptyProfile);
@@ -35,6 +37,10 @@ export default function Chat() {
 
   const progress=getChatProgress(profile,skippedTopics);
   const answeredRequiredQuestions=Math.min(answeredQuestions,requiredAnswersForSwipes);
+
+  useLayoutEffect(()=>{
+    setActiveStep(stage==="chat"?"chat":"swipes");
+  },[stage,setActiveStep]);
 
   useLayoutEffect(()=>{
     if(answeredQuestions<requiredAnswersForSwipes||stage!=="chat")return;

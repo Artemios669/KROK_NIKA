@@ -2,11 +2,14 @@
 import {useEffect,useState} from "react";
 import Link from "next/link";
 import {AlertCircle,ArrowRight} from "lucide-react";
-import {emptyProfile} from "@/types/user";
+import {RecommendationAssistant} from "@/components/recommendation-assistant";
 import {readTraitSwipes} from "@/lib/characteristics";
 import {userProfileSchema} from "@/lib/validation/profile";
 import {recommendationResponseSchema,RecommendationMatch} from "@/lib/validation/recommendations";
 import {formatAnimalAge} from "@/lib/animal-catalog";
+import {emptyProfile} from "@/types/user";
+import type {SwipeReaction} from "@/lib/characteristics";
+import type {UserProfile} from "@/types/user";
 
 function responseError(value:unknown) {
   if(typeof value==="object"&&value!==null&&"error" in value&&typeof value.error==="string")return value.error;
@@ -15,6 +18,8 @@ function responseError(value:unknown) {
 
 export default function Results(){
   const [matches,setMatches]=useState<RecommendationMatch[]>([]);
+  const [profile,setProfile]=useState<UserProfile>(emptyProfile);
+  const [swipes,setSwipes]=useState<SwipeReaction[]>([]);
   const [source,setSource]=useState<"demo"|"supabase"|"mixed">("demo");
   const [catalogCounts,setCatalogCounts]=useState<{total:number;eligible:number;unavailable:number;unsupportedType:number;unconfirmedAvailability:number}|null>(null);
   const [loading,setLoading]=useState(true);
@@ -25,7 +30,7 @@ export default function Results(){
     let active=true;
 
     async function loadRecommendations() {
-      let profile=emptyProfile;
+      let loadedProfile=emptyProfile;
       try {
         const savedProfile=localStorage.getItem("niker-profile");
         if(savedProfile) {
@@ -33,7 +38,7 @@ export default function Results(){
           if(!parsedProfile.success) {
             throw new Error("Сохранённый профиль повреждён. Вернитесь в чат и пройдите его ещё раз.");
           }
-          profile=parsedProfile.data;
+          loadedProfile=parsedProfile.data;
         } else {
           setNotice("Профиль не найден. Оценка не будет персонализирована, пока вы не заполните его в чате.");
         }
@@ -45,11 +50,17 @@ export default function Results(){
         return;
       }
 
+      const savedSwipes=readTraitSwipes();
+      if(active) {
+        setProfile(loadedProfile);
+        setSwipes(savedSwipes);
+      }
+
       try {
         const response=await fetch("/api/recommendations",{
           method:"POST",
           headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({profile,swipes:readTraitSwipes()}),
+          body:JSON.stringify({profile:loadedProfile,swipes:savedSwipes}),
         });
         const payload:unknown=await response.json();
         if(!response.ok)throw new Error(responseError(payload));
@@ -158,6 +169,7 @@ export default function Results(){
         <div className="actions">
           <Link className="button" href={`/animals/${encodeURIComponent(animal.id)}`}>Подробнее <ArrowRight/></Link>
           <Link className="button ghost" href={`/adoption?animal=${encodeURIComponent(animal.id)}`}>Хочу познакомиться</Link>
+          <RecommendationAssistant animalId={animal.id} animalName={animal.name} score={top.score} profile={profile} swipes={swipes}/>
         </div>
       </div>
     </section>

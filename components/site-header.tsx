@@ -1,43 +1,51 @@
 "use client";
 
-import {useState} from "react";
+import {usePathname} from "next/navigation";
 import Link from "next/link";
-import {Menu,PawPrint,X} from "lucide-react";
+import {Check,PawPrint} from "lucide-react";
+import {RoadmapStep,useRoadmap} from "@/components/roadmap-context";
 
-const navigation=[
-  {href:"/chat",label:"Подбор",className:"nav-chat"},
-  {href:"/discover",label:"Характеристики"},
-  {href:"/admin",label:"Демо-панель"},
+const steps:{id:RoadmapStep;label:string}[]=[
+  {id:"chat",label:"Чат"},
+  {id:"swipes",label:"Свайпы"},
+  {id:"compatibility",label:"Совместимость"},
 ];
 
 export function SiteHeader() {
-  const [menuOpen,setMenuOpen]=useState(false);
+  const pathname=usePathname();
+  const {activeStep}=useRoadmap();
+  const currentStep=pathname==="/chat"
+    ?activeStep
+    :pathname==="/discover"
+      ?"swipes"
+      :pathname==="/results"||pathname.startsWith("/animals/")||pathname==="/adoption"
+        ?"compatibility"
+        :"chat";
+  const currentIndex=steps.findIndex(step=>step.id===currentStep);
+  const isAdmin=pathname==="/admin"||pathname.startsWith("/admin/");
 
   return <header className="site-header">
     <div className="site-header-inner">
-      <Link className="brand" href="/" onClick={()=>setMenuOpen(false)}>
+      <Link className="brand" href="/">
         <PawPrint size={22} strokeWidth={2.2}/>
         <span>НИКЕР</span>
       </Link>
-      <nav className={`site-nav${menuOpen?" is-open":""}`} id="site-navigation" aria-label="Основная навигация">
-        {navigation.map(item=><Link
-          href={item.href}
-          className={item.className}
-          key={item.href}
-          onClick={()=>setMenuOpen(false)}
-        >{item.label}</Link>)}
-      </nav>
-      <div className="header-actions">
-        <Link className="button header-cta" href="/chat">Начать подбор</Link>
-        <button
-          className="menu-toggle"
-          type="button"
-          aria-label={menuOpen?"Закрыть меню":"Открыть меню"}
-          aria-controls="site-navigation"
-          aria-expanded={menuOpen}
-          onClick={()=>setMenuOpen(open=>!open)}
-        >{menuOpen?<X size={21}/>:<Menu size={21}/>}</button>
-      </div>
+      {!isAdmin&&<ol className="roadmap" aria-label="Этапы подбора">
+        {steps.map((step,index)=>{
+          const status=index<currentIndex?"complete":index===currentIndex?"current":"upcoming";
+          return <li
+            className={`roadmap-step is-${status}`}
+            aria-current={status==="current"?"step":undefined}
+            key={step.id}
+          >
+            <span className="roadmap-marker" aria-hidden="true">
+              {status==="complete"?<Check size={14} strokeWidth={2.5}/>:index+1}
+            </span>
+            <span className="roadmap-label">{step.label}</span>
+            {index<steps.length-1&&<span className="roadmap-connector" aria-hidden="true"/>}
+          </li>;
+        })}
+      </ol>}
     </div>
   </header>;
 }

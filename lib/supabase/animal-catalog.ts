@@ -1,5 +1,5 @@
 import "server-only";
-import {animalsSchema} from "@/lib/validation/animal";
+import {animalSchema,animalsSchema} from "@/lib/validation/animal";
 import {normalizeImportedAnimals} from "@/lib/animal-catalog";
 import {getAnimalsTableName,getSupabase} from "@/lib/supabase/server";
 
@@ -56,4 +56,24 @@ export async function loadSupabaseAnimalCatalog(client:SupabaseClient) {
     unconfirmedAvailability:0,
     unavailableRecords:parsed.data.filter(animal=>!animal.adoption_available).length,
   };
+}
+
+export async function loadSupabaseAnimalById(client:SupabaseClient,id:string) {
+  const table=getAnimalsTableName();
+  const result=table==="animalsss"
+    ?await client.from("animalsss").select(importedColumns).eq("id",id).maybeSingle()
+    :await client.from("animals").select("*").eq("id",id).maybeSingle();
+
+  if(result.error)throw new Error(result.error.message);
+  if(!result.data)return null;
+
+  if(table==="animalsss") {
+    const normalized=normalizeImportedAnimals([result.data],{assumeAvailableWhenUnknown:true});
+    if(normalized.skipped>0)throw new Error(`Record ${id} in ${table} is invalid.`);
+    return normalized.animals[0]||null;
+  }
+
+  const parsed=animalSchema.safeParse(result.data);
+  if(!parsed.success)throw new Error(`Record ${id} in ${table} does not match the application animal schema.`);
+  return parsed.data;
 }
