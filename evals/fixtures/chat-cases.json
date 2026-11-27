@@ -1,0 +1,165 @@
+[
+  {
+    "id": "housing-family-multiple-facts",
+    "message": "Живём в квартире, двое детей 5 и 8 лет, других животных нет.",
+    "currentTopic": "housing",
+    "profileTemplate": "empty",
+    "expectedExtracted": {
+      "housing.type": "квартира",
+      "household.children": 2,
+      "household.children_ages": [5, 8],
+      "household.other_animals_confirmed": true
+    },
+    "expectedModel": {
+      "housing.type": "квартира",
+      "household.children": 2,
+      "household.children_ages": [5, 8],
+      "household.other_animals_confirmed": true
+    },
+    "expectedNextTopic": "routine"
+  },
+  {
+    "id": "routine-hours-walks-activity",
+    "message": "Нас нет дома 6 часов, сможем гулять 2 раза в день, ритм спокойный.",
+    "currentTopic": "routine",
+    "profileTemplate": "family-complete",
+    "expectedExtracted": {
+      "lifestyle.hours_away_daily": 6,
+      "lifestyle.walks_per_day": 2,
+      "lifestyle.activity_level": "low",
+      "preferences.activity": "low"
+    },
+    "expectedModel": {
+      "lifestyle.hours_away_daily": 6,
+      "lifestyle.walks_per_day": 2,
+      "lifestyle.activity_level": "low"
+    },
+    "expectedNextTopic": "animal_type"
+  },
+  {
+    "id": "preference-and-prior-experience",
+    "message": "Рассматриваю собаку. Раньше ухаживала за кошкой.",
+    "currentTopic": "animal_type",
+    "profileTemplate": "requirements-complete",
+    "expectedExtracted": {
+      "preferences.animal_type": "dog",
+      "experience.has_pet_experience": true
+    },
+    "expectedModel": {
+      "preferences.animal_type": "dog",
+      "experience.has_pet_experience": true
+    },
+    "expectedNextTopic": "experience",
+    "replyMustContain": "серьёзно заболев"
+  },
+  {
+    "id": "history-keeps-family-and-adopted-pet-facts",
+    "message": "Нас нет дома 2 часа, ритм спокойный.",
+    "currentTopic": "routine",
+    "profileTemplate": "empty",
+    "history": [
+      {
+        "role": "user",
+        "text": "Живу в частном доме с двумя детьми 4 и 7 лет и кошкой, которую взяли из приюта."
+      },
+      {
+        "role": "assistant",
+        "text": "Сколько часов вы отсутствуете дома?"
+      }
+    ],
+    "expectedExtracted": {
+      "lifestyle.hours_away_daily": 2,
+      "lifestyle.activity_level": "low",
+      "preferences.activity": "low"
+    },
+    "expectedModel": {
+      "lifestyle.hours_away_daily": 2,
+      "lifestyle.activity_level": "low",
+      "housing.type": "дом",
+      "household.children": 2,
+      "household.children_ages": [4, 7],
+      "household.other_animals": ["кошка"],
+      "household.other_animals_confirmed": true,
+      "experience.has_pet_experience": true
+    },
+    "expectedProfile": {
+      "housing.type": "дом",
+      "household.children": 2,
+      "household.children_ages": [4, 7],
+      "household.other_animals": ["кошка"],
+      "household.other_animals_confirmed": true,
+      "experience.has_pet_experience": true
+    },
+    "expectedNextTopic": "animal_type",
+    "replyMustNotContain": ["дет", "Был ли у вас раньше опыт"]
+  },
+  {
+    "id": "care-during-illness",
+    "message": "Когда прежняя кошка болела, обращалась к ветеринару и давала лекарства по назначению.",
+    "currentTopic": "experience",
+    "profileTemplate": "experience-followup",
+    "expectedExtracted": {
+      "experience.has_pet_experience": true,
+      "experience.care_experience": "Когда прежняя кошка болела, обращалась к ветеринару и давала лекарства по назначению."
+    },
+    "expectedModel": {
+      "experience.has_pet_experience": true,
+      "experience.care_experience": "Когда прежняя кошка болела, обращалась к ветеринару и давала лекарства по назначению."
+    }
+  },
+  {
+    "id": "explicit-no-prior-experience",
+    "message": "Опыта ухода за животными не было.",
+    "currentTopic": "experience",
+    "profileTemplate": "experience-unknown",
+    "expectedExtracted": {
+      "experience.has_pet_experience": false,
+      "experience.care_experience": null
+    },
+    "expectedModel": {
+      "experience.has_pet_experience": false
+    }
+  },
+  {
+    "id": "special-care-readiness",
+    "message": "Готова заниматься дополнительным уходом, если питомцу понадобятся лекарства.",
+    "currentTopic": "special_care",
+    "profileTemplate": "readiness-unknown",
+    "expectedExtracted": {
+      "readiness.special_care": true,
+      "readiness.financial_readiness_confirmed": null
+    },
+    "expectedModel": {
+      "readiness.special_care": true,
+      "readiness.financial_readiness_confirmed": null
+    }
+  },
+  {
+    "id": "financial-readiness-negative",
+    "message": "Не готова к регулярным расходам на корм.",
+    "currentTopic": "financial_readiness",
+    "profileTemplate": "readiness-unknown",
+    "expectedExtracted": {
+      "readiness.financial_readiness_confirmed": false,
+      "readiness.special_care": null
+    },
+    "expectedModel": {
+      "readiness.financial_readiness_confirmed": false,
+      "readiness.special_care": null
+    }
+  },
+  {
+    "id": "income-does-not-imply-readiness",
+    "message": "У меня хороший доход.",
+    "currentTopic": "financial_readiness",
+    "profileTemplate": "readiness-unknown",
+    "expectedExtracted": {
+      "readiness.financial_readiness_confirmed": null,
+      "readiness.special_care": null
+    },
+    "expectedModel": {
+      "readiness.financial_readiness_confirmed": null,
+      "readiness.special_care": null
+    }
+  }
+]

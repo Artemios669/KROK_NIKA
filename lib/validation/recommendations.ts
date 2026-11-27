@@ -41,6 +41,11 @@ export const matchSchema=z.object({
 export const recommendationResponseSchema=z.object({
   recommendations:z.array(matchSchema),
   source:z.enum(["demo","supabase","mixed"]),
+  catalogRecords:z.number().int().nonnegative().optional(),
+  eligibleRecords:z.number().int().nonnegative().optional(),
+  unavailableRecords:z.number().int().nonnegative().optional(),
+  unsupportedTypeRecords:z.number().int().nonnegative().optional(),
+  unconfirmedAvailabilityRecords:z.number().int().nonnegative().optional(),
 });
 
 export type RecommendationMatch=z.infer<typeof matchSchema>;

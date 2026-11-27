@@ -9,6 +9,7 @@ import {Animal} from "@/types/animal";
 export function CharacteristicSwipe({onBack}:{onBack?:()=>void}){
   const [animals,setAnimals]=useState<Animal[]>([]);
   const [source,setSource]=useState<"demo"|"supabase"|"mixed">("demo");
+  const [catalogStats,setCatalogStats]=useState<{total:number;eligible:number;unavailable:number;unsupportedType:number;unconfirmedAvailability:number}|null>(null);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [swipes,setSwipes]=useState<SwipeReaction[]>([]);
@@ -27,6 +28,15 @@ export function CharacteristicSwipe({onBack}:{onBack?:()=>void}){
       if(!Array.isArray(data.animals))throw new Error("Список карточек отсутствует.");
       setAnimals(data.animals);
       setSource(data.source==="supabase"||data.source==="mixed"?data.source:"demo");
+      if(Number.isInteger(data.totalRecords)&&Number.isInteger(data.eligibleRecords)) {
+        setCatalogStats({
+          total:data.totalRecords,
+          eligible:data.eligibleRecords,
+          unavailable:Number.isInteger(data.unavailableRecords)?data.unavailableRecords:0,
+          unsupportedType:Number.isInteger(data.unsupportedTypeRecords)?data.unsupportedTypeRecords:0,
+          unconfirmedAvailability:Number.isInteger(data.unconfirmedAvailabilityRecords)?data.unconfirmedAvailabilityRecords:0,
+        });
+      }
     }).catch(()=>{
       setAnimals(demoAnimals);
       setSource("demo");
@@ -81,6 +91,12 @@ export function CharacteristicSwipe({onBack}:{onBack?:()=>void}){
       <span className="eyebrow">{source==="demo"?"ТЕСТОВЫЕ ДАННЫЕ":source==="mixed"?"В БАЗЕ ЕСТЬ ТЕСТОВЫЕ КАРТОЧКИ":"КАТАЛОГ ИЗ БАЗЫ"} · ДО {MAX_CHARACTERISTIC_CARDS} КАРТОЧЕК</span>
       <h1>Выбирайте характеристики</h1>
       <p>Свайпайте особенности питомцев, а не их фотографии или имена. Неизвестные сведения не придумываем.</p>
+      {catalogStats&&<p className="trait-catalog-count">
+        Для карточек загружено {catalogStats.eligible} животных из {catalogStats.total} записей.
+        {catalogStats.unavailable>0&&` Недоступны для пристройства: ${catalogStats.unavailable}.`}
+        {catalogStats.unsupportedType>0&&` Тип не распознан: ${catalogStats.unsupportedType}.`}
+        {catalogStats.unconfirmedAvailability>0&&` Статус доступности не указан; по правилу каталога эти записи учитываются как доступные: ${catalogStats.unconfirmedAvailability}.`}
+      </p>}
     </div>
     {error&&<p className="trait-error" role="status">{error}</p>}
     {loading?<div className="trait-loading">Подготавливаем карточки…</div>:!current?<div className="trait-finished">
