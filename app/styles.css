@@ -1825,3 +1825,708 @@ button:disabled {
     animation-duration: 0.01ms !important;
   }
 }
+
+.nika-pets-page {
+  min-height: 100vh;
+  background: #f7f7f3;
+}
+
+.nika-demo-header {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 clamp(20px, 5vw, 72px);
+  border-bottom: 1px solid #e8e9e3;
+  background: rgb(255 255 255 / 96%);
+  backdrop-filter: blur(12px);
+}
+
+.nika-demo-brand {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 11px;
+  color: #293d2d;
+}
+
+.nika-demo-brand-mark,
+.nika-chat-avatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: #edf2e8;
+  color: #4f704b;
+}
+
+.nika-demo-brand strong,
+.nika-demo-brand small {
+  display: block;
+}
+
+.nika-demo-brand strong {
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.nika-demo-brand small {
+  margin-top: 3px;
+  color: #788073;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.nika-demo-nav {
+  display: flex;
+  height: 76px;
+  align-items: stretch;
+}
+
+.nika-demo-tab {
+  position: relative;
+  display: inline-flex;
+  min-width: 130px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 20px;
+  border: 0;
+  background: transparent;
+  color: #566052;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.nika-demo-tab:hover {
+  color: #244b32;
+  background: #f8faf6;
+}
+
+.nika-demo-tab.is-active {
+  color: #244b32;
+}
+
+.nika-demo-tab.is-active::after {
+  position: absolute;
+  right: 18px;
+  bottom: 0;
+  left: 18px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: #607963;
+  content: "";
+}
+
+.nika-demo-external {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  color: #607963;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nika-demo-external:hover,
+.nika-pet-more:hover {
+  color: #244b32;
+}
+
+.nika-pets-main {
+  width: min(100%, 1320px);
+  min-height: calc(100vh - 76px);
+  margin: 0 auto;
+  padding: clamp(32px, 5vw, 62px) clamp(20px, 5vw, 72px) 76px;
+}
+
+.nika-pets-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 32px;
+}
+
+.nika-pets-eyebrow {
+  display: block;
+  margin-bottom: 10px;
+  color: #72816d;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.nika-pets-intro h1 {
+  margin-bottom: 10px;
+  color: #293d2d;
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: -0.045em;
+}
+
+.nika-pets-intro p {
+  max-width: 600px;
+  margin-bottom: 0;
+  color: #747d70;
+  font-size: 15px;
+}
+
+.nika-pets-count {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid #e4e9e0;
+  border-radius: 999px;
+  background: white;
+  color: #587254;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nika-pets-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 26px;
+  padding: 16px;
+  border: 1px solid #e9ebe5;
+  border-radius: 15px;
+  background: white;
+}
+
+.nika-pets-search {
+  display: flex;
+  min-width: min(320px, 100%);
+  height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 13px;
+  border: 1px solid #e5e9e1;
+  border-radius: 9px;
+  color: #71806d;
+}
+
+.nika-pets-search input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 14px;
+}
+
+.nika-pets-search input::placeholder {
+  color: #9aa095;
+}
+
+.nika-pets-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nika-pets-filters button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #f5f6f2;
+  color: #697365;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nika-pets-filters button:hover {
+  border-color: #dce5d8;
+}
+
+.nika-pets-filters button.is-selected {
+  border-color: #52714f;
+  background: #52714f;
+  color: white;
+}
+
+.nika-pets-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.nika-pet-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e7e9e2;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 4px 18px rgb(34 50 31 / 4%);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.nika-pet-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 26px rgb(34 50 31 / 9%);
+}
+
+.nika-pet-image {
+  position: relative;
+  display: grid;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  place-items: center;
+  background: #e9eee5;
+}
+
+.nika-pet-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 220ms ease;
+}
+
+.nika-pet-card:hover .nika-pet-image img {
+  transform: scale(1.025);
+}
+
+.nika-pet-image-fallback {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: #81907b;
+  font-size: 12px;
+}
+
+.nika-pet-type {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 94%);
+  color: #485e45;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.nika-pet-card-copy {
+  display: flex;
+  min-height: 207px;
+  flex-direction: column;
+  padding: 17px 18px 15px;
+}
+
+.nika-pet-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nika-pet-title-row h2 {
+  overflow: hidden;
+  margin: 0;
+  color: #293d2d;
+  font-size: 19px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nika-pet-title-row svg {
+  flex: 0 0 auto;
+  color: #82927d;
+}
+
+.nika-pet-age {
+  margin: 5px 0 11px;
+  color: #778071;
+  font-size: 12px;
+}
+
+.nika-pet-description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-bottom: 16px;
+  color: #636d60;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.nika-pet-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: auto;
+  color: #5d7957;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.nika-pets-load-more {
+  display: block;
+  min-height: 46px;
+  margin: 32px auto 0;
+  padding: 0 24px;
+  border: 1px solid #d5dfd1;
+  border-radius: 999px;
+  background: white;
+  color: #4b6848;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.nika-pets-load-more:hover {
+  background: #edf2e8;
+}
+
+.nika-pets-state {
+  display: flex;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #6d7769;
+  text-align: center;
+}
+
+.nika-pets-state.is-error {
+  color: #9b423b;
+}
+
+.nika-pets-state button {
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid #e4c8c3;
+  border-radius: 999px;
+  background: white;
+  color: #8e3f38;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.nika-chat-backdrop {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  border: 0;
+  background: rgb(24 34 25 / 38%);
+  cursor: default;
+  animation: nika-backdrop-in 180ms ease both;
+}
+
+.nika-chat-drawer {
+  position: fixed;
+  z-index: 61;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  width: min(440px, 100vw);
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: -16px 0 40px rgb(18 28 20 / 16%);
+  transform: translateX(102%);
+  visibility: hidden;
+  transition: transform 260ms ease, visibility 0s linear 260ms;
+}
+
+.nika-chat-drawer.is-open {
+  transform: translateX(0);
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.nika-chat-drawer.is-expanded {
+  right: 0;
+  left: 0;
+  width: 100vw;
+}
+
+.nika-chat-header {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 17px;
+  border-bottom: 1px solid #e8ebe5;
+  background: white;
+}
+
+.nika-chat-avatar {
+  width: 40px;
+  height: 40px;
+}
+
+.nika-chat-heading {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.nika-chat-heading strong {
+  color: #293d2d;
+  font-size: 14px;
+}
+
+.nika-chat-heading span {
+  color: #788073;
+  font-size: 11px;
+}
+
+.nika-chat-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.nika-chat-actions button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #687365;
+  cursor: pointer;
+}
+
+.nika-chat-actions button:hover {
+  background: #f0f3ed;
+  color: #293d2d;
+}
+
+.nika-chat-content {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  background: #f8f9f6;
+}
+
+.nika-chat-content > main.chat-wrap {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  padding: 16px;
+}
+
+.nika-chat-content .chat-wrap aside {
+  display: none;
+}
+
+.nika-chat-content .chat {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 16px;
+  border: 1px solid #ebeee8;
+  border-radius: 13px;
+  box-shadow: 0 2px 9px rgb(30 45 30 / 4%);
+}
+
+.nika-chat-content .messages {
+  min-height: 0;
+  max-height: none;
+}
+
+.nika-chat-content .composer {
+  flex-wrap: wrap;
+}
+
+.nika-chat-content .composer input {
+  flex: 1 1 calc(100% - 58px);
+}
+
+.nika-chat-content .composer .skip-question {
+  margin-right: auto;
+}
+
+.nika-chat-content > main.trait-page {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.nika-chat-content .trait-card-wrap {
+  width: 100%;
+  max-width: 380px;
+}
+
+.nika-chat-content .trait-card {
+  min-height: 300px;
+}
+
+.nika-chat-content .trait-photo {
+  max-height: 180px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+@keyframes nika-backdrop-in {
+  from {opacity: 0}
+  to {opacity: 1}
+}
+
+@media (max-width: 900px) {
+  .nika-pets-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (max-width: 620px) {
+  .nika-demo-header {
+    min-height: 66px;
+    gap: 8px;
+    padding: 0 16px;
+  }
+
+  .nika-demo-brand {
+    gap: 8px;
+  }
+
+  .nika-demo-brand-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .nika-demo-brand strong {
+    font-size: 15px;
+  }
+
+  .nika-demo-brand small {
+    font-size: 10px;
+  }
+
+  .nika-demo-nav {
+    height: 66px;
+  }
+
+  .nika-demo-tab {
+    min-width: 104px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .nika-demo-tab.is-active::after {
+    right: 12px;
+    left: 12px;
+  }
+
+  .nika-demo-external {
+    display: none;
+  }
+
+  .nika-pets-main {
+    min-height: calc(100vh - 66px);
+    padding: 32px 16px 52px;
+  }
+
+  .nika-pets-intro {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+
+  .nika-pets-intro h1 {
+    font-size: 2rem;
+  }
+
+  .nika-pets-intro p {
+    font-size: 14px;
+  }
+
+  .nika-pets-controls {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 12px;
+  }
+
+  .nika-pets-search {
+    min-width: 0;
+  }
+
+  .nika-pets-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .nika-pets-filters button {
+    padding: 0 9px;
+  }
+
+  .nika-pets-grid {
+    gap: 12px;
+  }
+
+  .nika-pet-card-copy {
+    min-height: 190px;
+    padding: 13px;
+  }
+
+  .nika-pet-title-row h2 {
+    font-size: 16px;
+  }
+
+  .nika-pet-description {
+    font-size: 12px;
+  }
+
+  .nika-chat-drawer {
+    width: 100vw;
+  }
+
+  .nika-chat-content > main.chat-wrap {
+    padding: 12px;
+  }
+
+  .nika-chat-content .chat {
+    padding: 14px;
+  }
+
+  .nika-chat-content > main.trait-page {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 390px) {
+  .nika-pets-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nika-pet-image {
+    aspect-ratio: 4 / 3;
+  }
+}

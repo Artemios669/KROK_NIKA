@@ -6,7 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "vitest run"
+    "test": "vitest run",
+    "eval:chat:offline": "CHAT_EVAL_WRITE_REPORT=1 vitest run tests/chat-extraction-eval.test.ts --reporter=verbose",
+    "eval:chat:model": "GEMINI_EVAL_LIVE=1 node --env-file=.env.local ./node_modules/vitest/vitest.mjs run tests/gemini-model-eval.test.ts --reporter=verbose",
+    "eval:chat:criteria": "GEMINI_EVAL_CRITERIA=1 node --env-file=.env.local ./node_modules/vitest/vitest.mjs run tests/gemini-criteria-eval.test.ts --reporter=verbose",
+    "eval:chat:model:score": "node evals/score-chat-model-report.mjs",
+    "eval:chat:live": "node --env-file=.env.local evals/run-chat-live.mjs",
+    "eval:parser:export": "node --env-file=.env.local evals/export-animal-parser-review.mjs",
+    "eval:parser:score": "node evals/score-animal-parser-review.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.0.0",

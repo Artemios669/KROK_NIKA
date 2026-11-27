@@ -24,6 +24,8 @@ export function SiteHeader() {
   const currentIndex=steps.findIndex(step=>step.id===currentStep);
   const isAdmin=pathname==="/admin"||pathname.startsWith("/admin/");
 
+  if(pathname.startsWith("/ourpets"))return null;
+
   return <header className="site-header">
     <div className="site-header-inner">
       <Link className="brand" href="/">

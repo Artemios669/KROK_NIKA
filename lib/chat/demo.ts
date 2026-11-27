@@ -132,7 +132,7 @@ function extractProfileForTopic(message:string,profile:UserProfile,topic:ChatTop
 
   if(includes("experience")) {
     const animalObject="(?:животными|животных|питомцами|питомцев|кошкой|кошками|котом|котами|собакой|собаками|псом|псами)";
-    const saysNoExperience=new RegExp(`(?:^|[\\s,.!?])(?:нет(?:[, ]+у меня)? опыта(?: ухода(?: за ${animalObject})?| (?:с|за) ${animalObject})?|без опыта(?: ухода)?|не было опыта(?: ухода)?|опыта(?: ухода)? (?:не было|нет)|никогда не было (?:домашних )?(?:животных|питомцев)|никогда не держал[аи]? животных)(?=$|[,.!?])`).test(text);
+    const saysNoExperience=new RegExp(`(?:^|[\\s,.!?])(?:нет(?:[, ]+у меня)? опыта(?: ухода(?: за ${animalObject})?| (?:с|за) ${animalObject})?|без опыта(?: ухода)?|не было опыта(?: ухода)?|опыта(?: ухода(?: за ${animalObject})?)? (?:не было|нет)|никогда не было (?:домашних )?(?:животных|питомцев)|никогда не держал[аи]? животных)(?=$|[,.!?])`).test(text);
     const saysExperience=/опыт|были.*(?:животн|питомц)|раньше.*(?:кот|собак|пес)|ухаживал|ухаживала|^(?:да|был|была|были)$/.test(text)||describesPriorPetCare;
     if(saysNoExperience) {
       next.experience.has_pet_experience=false;
