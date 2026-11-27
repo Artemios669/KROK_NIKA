@@ -11,10 +11,10 @@ const steps:{id:RoadmapStep;label:string}[]=[
   {id:"compatibility",label:"Совместимость"},
 ];
 
-export function SiteHeader() {
+export function SiteHeader({embedded=false}:{embedded?:boolean}={}) {
   const pathname=usePathname();
   const {activeStep}=useRoadmap();
-  const currentStep=pathname==="/chat"
+  const currentStep=embedded||pathname==="/chat"
     ?activeStep
     :pathname==="/discover"
       ?"swipes"
@@ -24,9 +24,9 @@ export function SiteHeader() {
   const currentIndex=steps.findIndex(step=>step.id===currentStep);
   const isAdmin=pathname==="/admin"||pathname.startsWith("/admin/");
 
-  if(pathname.startsWith("/ourpets"))return null;
+  if(pathname.startsWith("/ourpets")&&!embedded)return null;
 
-  return <header className="site-header">
+  return <header className={`site-header${embedded?" site-header-embedded":""}`}>
     <div className="site-header-inner">
       <Link className="brand" href="/">
         <PawPrint size={22} strokeWidth={2.2}/>

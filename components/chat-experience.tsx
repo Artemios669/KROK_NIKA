@@ -3,6 +3,7 @@
 import {useLayoutEffect,useRef,useState} from "react";
 import {Send} from "lucide-react";
 import {CharacteristicSwipe} from "@/components/characteristic-swipe";
+import {RecommendationResults} from "@/components/recommendation-results";
 import {useRoadmap} from "@/components/roadmap-context";
 import {ChatTopic,getChatProgress,chatTopicSchema} from "@/lib/chat/progress";
 import {getChatScenario} from "@/lib/chat/scenarios";
@@ -29,7 +30,7 @@ export function ChatExperience() {
   const [error,setError]=useState("");
   const [failedMessage,setFailedMessage]=useState<FailedMessage|null>(null);
   const [mode,setMode]=useState<"demo"|"gemini">("demo");
-  const [stage,setStage]=useState<"chat"|"swipes">("chat");
+  const [stage,setStage]=useState<"chat"|"swipes"|"compatibility">("chat");
   const [answeredQuestions,setAnsweredQuestions]=useState(0);
   const [swipeBannerTop,setSwipeBannerTop]=useState(12);
   const answersLabelRef=useRef<HTMLElement>(null);
@@ -39,7 +40,7 @@ export function ChatExperience() {
   const answeredRequiredQuestions=Math.min(answeredQuestions,requiredAnswersForSwipes);
 
   useLayoutEffect(()=>{
-    setActiveStep(stage==="chat"?"chat":"swipes");
+    setActiveStep(stage);
   },[stage,setActiveStep]);
 
   useLayoutEffect(()=>{
@@ -75,6 +76,7 @@ export function ChatExperience() {
     if(!retry) {
       setMessages(items=>[...items,{role:"user",text:outgoing}]);
       setValue("");
+      if(!skip)setAnsweredQuestions(count=>Math.min(count+1,requiredAnswersForSwipes));
     }
     setError("");
     setLoading(true);
@@ -107,7 +109,6 @@ export function ChatExperience() {
       setMode(data.mode==="gemini"?"gemini":"demo");
       setMessages(items=>[...items,{role:"assistant",text:data.message}]);
       setFailedMessage(null);
-      if(!skip)setAnsweredQuestions(count=>count+1);
 
       try {
         localStorage.setItem("niker-profile",JSON.stringify(parsedProfile.data));
@@ -136,13 +137,20 @@ export function ChatExperience() {
 
   function removeFailedMessage() {
     if(failedMessage) {
-      setMessages(items=>items.at(-1)?.role==="user"&&items.at(-1)?.text===failedMessage.text?items.slice(0,-1):items);
+      if(messages.at(-1)?.role==="user"&&messages.at(-1)?.text===failedMessage.text) {
+        setMessages(items=>items.slice(0,-1));
+        if(!failedMessage.skip)setAnsweredQuestions(count=>Math.max(0,count-1));
+      }
     }
     setFailedMessage(null);
     setError("");
   }
 
-  if(stage==="swipes")return <main className="trait-page"><CharacteristicSwipe onBack={()=>setStage("chat")}/></main>;
+  if(stage==="swipes")return <main className="trait-page"><CharacteristicSwipe
+    onBack={()=>setStage("chat")}
+    onShowResults={()=>setStage("compatibility")}
+  /></main>;
+  if(stage==="compatibility")return <RecommendationResults onBack={()=>setStage("swipes")}/>;
 
   return <main className="chat-wrap">
     <aside>
@@ -150,11 +158,15 @@ export function ChatExperience() {
       <h2>Узнаём друг друга</h2>
       <p>Я буду собирать связанные сведения вместе. Если не хотите отвечать на тему, её можно пропустить.</p>
       <div className="progress"><span style={{width:`${answeredRequiredQuestions/requiredAnswersForSwipes*100}%`}}/></div>
-      <small ref={answersLabelRef}>Ответы на обязательные вопросы: {answeredRequiredQuestions} из {requiredAnswersForSwipes}.</small>
+      <small ref={answersLabelRef}>
+        {answeredRequiredQuestions<requiredAnswersForSwipes
+          ?`Выполнено вопросов: ${answeredRequiredQuestions} из ${requiredAnswersForSwipes}. Ответьте на все ${requiredAnswersForSwipes}, чтобы перейти к свайпам.`
+          :`Выполнено вопросов: ${requiredAnswersForSwipes} из ${requiredAnswersForSwipes}. Можно перейти к свайпам.`}
+      </small>
       <small>Профиль не отправляется реальному приюту.</small>
     </aside>
     <section className="chat" ref={chatRef}>
-      {answeredQuestions>=requiredAnswersForSwipes&&<div className="chat-swipe-banner" role="status" style={{top:swipeBannerTop}}>
+      {answeredQuestions>=requiredAnswersForSwipes&&!loading&&!failedMessage&&<div className="chat-swipe-banner" role="status" style={{top:swipeBannerTop}}>
         <p>Вы ответили на пять обязательных вопросов. Можно перейти к свайпам или продолжить разговор.</p>
         <button className="button" type="button" onClick={()=>setStage("swipes")}>Свайпать характеристики</button>
       </div>}

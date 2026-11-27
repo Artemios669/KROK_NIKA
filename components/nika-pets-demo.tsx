@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import {ChatExperience} from "@/components/chat-experience";
+import {SiteHeader} from "@/components/site-header";
 import {animalTypeLabel,formatAnimalAge} from "@/lib/animal-catalog";
 import {animalsSchema} from "@/lib/validation/animal";
 import type {Animal} from "@/types/animal";
@@ -62,10 +63,19 @@ export function NikaPetsDemo() {
   const [filter,setFilter]=useState<AnimalFilter>("all");
   const [query,setQuery]=useState("");
   const [visibleCount,setVisibleCount]=useState(12);
-  const [chatOpen,setChatOpen]=useState(false);
-  const [chatMounted,setChatMounted]=useState(false);
+  const [chatOpen,setChatOpen]=useState(true);
+  const [chatMounted,setChatMounted]=useState(true);
   const [chatExpanded,setChatExpanded]=useState(false);
+  const [isMobile,setIsMobile]=useState(false);
   const [reloadCount,setReloadCount]=useState(0);
+
+  useEffect(()=>{
+    const mediaQuery=window.matchMedia("(max-width: 900px)");
+    const updateIsMobile=()=>setIsMobile(mediaQuery.matches);
+    updateIsMobile();
+    mediaQuery.addEventListener("change",updateIsMobile);
+    return ()=>mediaQuery.removeEventListener("change",updateIsMobile);
+  },[]);
 
   useEffect(()=>{
     let active=true;
@@ -102,7 +112,7 @@ export function NikaPetsDemo() {
   useEffect(()=>{
     if(!chatOpen)return;
     const previousOverflow=document.body.style.overflow;
-    document.body.style.overflow="hidden";
+    if(isMobile)document.body.style.overflow="hidden";
     const closeOnEscape=(event:KeyboardEvent)=>{
       if(event.key==="Escape") {
         setChatOpen(false);
@@ -111,10 +121,10 @@ export function NikaPetsDemo() {
     };
     window.addEventListener("keydown",closeOnEscape);
     return ()=>{
-      document.body.style.overflow=previousOverflow;
+      if(isMobile)document.body.style.overflow=previousOverflow;
       window.removeEventListener("keydown",closeOnEscape);
     };
-  },[chatOpen]);
+  },[chatOpen,isMobile]);
 
   const filteredAnimals=useMemo(()=>{
     const normalizedQuery=query.trim().toLocaleLowerCase("ru");
@@ -135,8 +145,8 @@ export function NikaPetsDemo() {
     setChatExpanded(false);
   }
 
-  return <div className="nika-pets-page">
-    <header className="nika-demo-header" inert={chatOpen}>
+  return <div className={`nika-pets-page${chatOpen?" has-chat-open":""}`}>
+    <header className="nika-demo-header" inert={chatOpen&&isMobile}>
       <Link className="nika-demo-brand" href="/ourpets" aria-label="Фонд НИКА — подопечные">
         <span className="nika-demo-brand-mark"><PawPrint size={22}/></span>
         <span><strong>Фонд НИКА</strong><small>Помогаем найти дом</small></span>
@@ -159,7 +169,7 @@ export function NikaPetsDemo() {
       </a>
     </header>
 
-    <main className="nika-pets-main" inert={chatOpen}>
+    <main className="nika-pets-main" inert={chatOpen&&isMobile}>
       <section className="nika-pets-intro">
         <div>
           <span className="nika-pets-eyebrow">Дом начинается со знакомства</span>
@@ -216,7 +226,7 @@ export function NikaPetsDemo() {
       </>}
     </main>
 
-    {chatOpen&&<button
+    {chatOpen&&isMobile&&<button
       className="nika-chat-backdrop"
       type="button"
       aria-label="Закрыть чат"
@@ -228,11 +238,12 @@ export function NikaPetsDemo() {
       className={`nika-chat-drawer${chatOpen?" is-open":""}${chatExpanded?" is-expanded":""}`}
       id="nika-chat-drawer"
       role="dialog"
-      aria-modal={chatOpen?"true":undefined}
+      aria-modal={chatOpen&&isMobile?"true":undefined}
       aria-labelledby="nika-chat-title"
       aria-hidden={!chatOpen}
       inert={!chatOpen}
     >
+      <SiteHeader embedded/>
       <header className="nika-chat-header">
         <span className="nika-chat-avatar"><PawPrint size={19}/></span>
         <div className="nika-chat-heading">
@@ -257,5 +268,16 @@ export function NikaPetsDemo() {
         <ChatExperience/>
       </div>
     </section>}
+    <button
+      className={`nika-chat-launcher${chatOpen?" is-open":""}`}
+      type="button"
+      aria-label="Открыть чат с помощником НИКИ"
+      aria-controls={chatMounted?"nika-chat-drawer":undefined}
+      aria-expanded={chatOpen}
+      onClick={openChat}
+    >
+      <MessageCircle size={18} aria-hidden="true"/>
+      <span>Чат</span>
+    </button>
   </div>;
 }
